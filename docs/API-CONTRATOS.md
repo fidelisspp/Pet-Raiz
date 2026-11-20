@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 5 (acabamento). Todas as rotas do roteiro de entrega estão prontas.
+**Estado:** Etapa 5.1 (aprovação de produtor). Próximas: 5.2 a 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
 
 ### Mudanças por etapa
 
@@ -13,6 +13,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 | 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
 | 5 | **Alterada:** `PUT /enderecos/{id}` passa a responder **409** quando o endereço já foi usado em pedido (igual ao `DELETE`). Antes, alterava e o pedido antigo mostrava o endereço novo |
+| 5.1 | **Novas (ADMIN, usuários):** `GET /produtores/pendentes`, `GET /produtores/cadastros?status=`, `PATCH /produtores/{id}/status`, `GET /produtores/{id}/documento`. **Alterada (compatível):** `POST /usuarios/produtores` também aceita **multipart** (`dados` + `documento`); o JSON continua igual. **Alterada:** o 403 do login de produtor rejeitado agora traz o motivo: `"Cadastro de produtor rejeitado. Motivo: …"` |
 
 ## Convenções
 
@@ -66,6 +67,19 @@ Corpo: `{ name, email, password, phone?, cnpj, companyName, technicalResponsible
 201 → `{ id, name, email, phone, cnpj, companyName, technicalResponsibleName, shortDescription, status: "pending" }`
 Erros: 409 e-mail ou CNPJ já cadastrado · 422. Login só após aprovação.
 
+**Com o documento de regularidade (multipart)** *(Etapa 5.1)* — mesma URL e mesma resposta:
+- `Content-Type: multipart/form-data` com duas partes:
+  - **`dados`**: o mesmo JSON acima, com `Content-Type: application/json` na parte;
+  - **`documento`**: o arquivo. **Qualquer formato**, até **5 MB**.
+- 422 → `errors.documento`: `"envie o documento de regularidade no campo documento"` (ausente ou vazio) ou
+  `"deve ter no máximo 5 MB"`; `message` = `"Documento inválido"`. Campos inválidos em `dados` → 422 como no JSON.
+- O documento só é visível para o ADMIN (rotas abaixo). O cadastro em JSON continua aceito, sem documento.
+
+### `POST /api/v1/auth` com produtor pendente ou rejeitado *(mensagens do 403)*
+- pendente: `"Seu cadastro está em análise, aguarde aprovação"`
+- rejeitado: `"Cadastro de produtor rejeitado. Motivo: <reason>"` *(Etapa 5.1: o motivo vem da análise do admin;
+  sem motivo registrado, só `"Cadastro de produtor rejeitado"`)*.
+
 ### `GET /api/v1/usuarios/me` — qualquer perfil
 200 → `{ id, name, email, phone, role, createdAt }`
 
@@ -96,6 +110,34 @@ Erros: 401 sem token · 403 perfil diferente de PRODUCER.
 ### `GET /api/v1/produtores/{id}` — público
 200 → `{ id, companyName, shortDescription, cnpj, imageUrl?, city?, state?, since, verified }`
 Erro: 404 inexistente, pendente ou rejeitado.
+
+### Análise de cadastros de produtor — ADMIN *(Etapa 5.1)*
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/produtores/pendentes?page=&size=` | — | 200 página de `ProdutorCadastroDto` (só `pending`, **mais antigos primeiro**) | 401 · 403 |
+| `GET /api/v1/produtores/cadastros?status=&page=&size=` | — | 200 página de `ProdutorCadastroDto` (**mais recentes primeiro**; sem `status` = todos) | 400 `status` inválido · 401 · 403 |
+| `PATCH /api/v1/produtores/{id}/status` | `{ "status": "approved" }` ou `{ "status": "rejected", "reason": "..." }` ou `{ "status": "pending" }` | 200 `ProdutorCadastroDto` atualizado | 401 · 403 · 404 · 409 · 422 |
+| `GET /api/v1/produtores/{id}/documento` | — | 200 com o arquivo (`Content-Type` original e `Content-Disposition: attachment; filename="<nome original>"`) | 401 · 403 · 404 (produtor inexistente ou sem documento) |
+
+- **Transições do PATCH:** `pending → approved`, `pending → rejected` e `rejected → pending` (reabrir a análise).
+  Qualquer outra → **409** com `message` (ex.: `"Não é possível mudar o cadastro de rejected para approved: um cadastro rejeitado só pode voltar para análise (pending)"`).
+  Aprovado não muda mais de status.
+- **422:** `status` fora de `pending|approved|rejected` → `errors.status`; `rejected` sem `reason` (ou só espaços) → `errors.reason`
+  (`"informe o motivo da rejeição"`). `reason` ≤ 500.
+- **Efeitos:** aprovado já consegue fazer login, aparece em `GET /produtores` e passa a ter os produtos no catálogo.
+  Rejeitado: `reviewedAt` e `rejectionReason` preenchidos, e o login devolve o motivo. Reabrir limpa os dois.
+- Ordem das páginas: o `sort` padrão é a data do cadastro (`producerCreatedAt`).
+
+`ProdutorCadastroDto`:
+```json
+{ "id": 1014, "name": "Marina Teste", "email": "sitio@exemplo.com", "phone": "(11) 98888-7777",
+  "cnpj": "54.208.142/0001-78", "companyName": "Sítio Teste", "technicalResponsibleName": "Marina Teste",
+  "shortDescription": "Hortaliças orgânicas", "status": "pending",
+  "createdAt": "2026-11-20T15:15:37", "reviewedAt": null, "rejectionReason": null,
+  "document": { "name": "alvara.pdf", "contentType": "application/pdf", "size": 182344, "submittedAt": "2026-11-20T15:15:37" } }
+```
+`document` é `null` quando o produtor se cadastrou sem documento (JSON) — caso dos produtores antigos.
 
 ### `GET /api/v1/clientes` e `GET /api/v1/clientes/{id}` — ADMIN
 Página (padrão 5, `name,asc`) / objeto `{ id, name, email, phone, cpf, suspended }`. Erros: 403 · 404.

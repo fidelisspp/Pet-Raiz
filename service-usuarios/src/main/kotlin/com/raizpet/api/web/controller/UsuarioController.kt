@@ -19,10 +19,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 
 @Tag(name = "Usuários", description = "Cadastro de clientes e produtores, consulta de usuários e troca de senha")
 @RestController
@@ -74,9 +76,38 @@ class UsuarioController(
             )
         ]
     )
-    @PostMapping("/produtores")
+    @PostMapping("/produtores", consumes = [MediaType.APPLICATION_JSON_VALUE])
     fun createProdutor(@Valid @RequestBody dto: ProdutorCreateDto): ResponseEntity<ProdutorResponseDto> {
         val producer = producerService.salvar(ProdutorMapper.toProducer(dto))
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProdutorMapper.toDto(producer))
+    }
+
+    @Operation(
+        summary = "Cadastrar produtor com documento (multipart)",
+        description = "Recurso público. Mesma URL e mesmo resultado do cadastro em JSON, mas em multipart/form-data: " +
+            "parte 'dados' (application/json, o mesmo ProdutorCreateDto) e parte 'documento' (o arquivo de regularidade, " +
+            "qualquer formato, até 5 MB). O admin baixa o documento em GET /api/v1/produtores/{id}/documento.",
+        responses = [
+            ApiResponse(
+                responseCode = "201", description = "Produtor criado com sucesso (em análise)",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ProdutorResponseDto::class))]
+            ),
+            ApiResponse(
+                responseCode = "409", description = "E-mail ou CNPJ já cadastrado no sistema",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            ),
+            ApiResponse(
+                responseCode = "422", description = "Dados inválidos ou documento ausente/acima de 5 MB (errors.documento)",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            )
+        ]
+    )
+    @PostMapping("/produtores", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun createProdutorComDocumento(
+        @Valid @RequestPart("dados") dto: ProdutorCreateDto,
+        @RequestPart("documento", required = false) documento: MultipartFile?
+    ): ResponseEntity<ProdutorResponseDto> {
+        val producer = producerService.salvarComDocumento(ProdutorMapper.toProducer(dto), documento)
         return ResponseEntity.status(HttpStatus.CREATED).body(ProdutorMapper.toDto(producer))
     }
 

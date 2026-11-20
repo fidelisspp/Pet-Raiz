@@ -22,6 +22,33 @@ data class ClienteResponseDto(
     val suspended: Boolean
 )
 
+/**
+ * Cadastro de produtor na visão do ADMIN (GET /produtores/pendentes, /produtores/cadastros e PATCH /status).
+ * document = dados do arquivo enviado no cadastro (null se não enviou); o conteúdo sai em GET /produtores/{id}/documento.
+ */
+data class ProdutorCadastroDto(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val phone: String?,
+    val cnpj: String,
+    val companyName: String,
+    val technicalResponsibleName: String,
+    val shortDescription: String,
+    val status: String,
+    val createdAt: LocalDateTime,
+    val reviewedAt: LocalDateTime?,
+    val rejectionReason: String?,
+    val document: DocumentoResumoDto?
+)
+
+data class DocumentoResumoDto(
+    val name: String,
+    val contentType: String,
+    val size: Long,
+    val submittedAt: LocalDateTime
+)
+
 data class ProdutorResponseDto(
     val id: Int,
     val name: String,

@@ -1,9 +1,12 @@
 package com.raizpet.api.web.dto.mapper
 
 import com.raizpet.api.entity.Producer
+import com.raizpet.api.entity.ProducerDocument
 import com.raizpet.api.entity.ProducerStatus
 import com.raizpet.api.util.DocumentoUtils
+import com.raizpet.api.web.dto.DocumentoResumoDto
 import com.raizpet.api.web.dto.ProdutorAprovadoDto
+import com.raizpet.api.web.dto.ProdutorCadastroDto
 import com.raizpet.api.web.dto.ProdutorCreateDto
 import com.raizpet.api.web.dto.ProdutorMeDto
 import com.raizpet.api.web.dto.ProdutorPublicoDto
@@ -57,6 +60,30 @@ object ProdutorMapper {
         city = producer.city,
         state = producer.state,
         status = producer.status.name
+    )
+
+    // Visão do admin (Etapa 5.1): tudo o que o produtor enviou e o resultado da análise
+    fun toCadastroDto(producer: Producer, documento: ProducerDocument?) = ProdutorCadastroDto(
+        id = requireNotNull(producer.id),
+        name = producer.name,
+        email = producer.email,
+        phone = producer.phone,
+        cnpj = producer.cnpj,
+        companyName = producer.companyName,
+        technicalResponsibleName = producer.technicalResponsibleName,
+        shortDescription = producer.shortDescription,
+        status = producer.status.name,
+        createdAt = producer.producerCreatedAt,
+        reviewedAt = producer.reviewedAt,
+        rejectionReason = producer.rejectionReason,
+        document = documento?.let {
+            DocumentoResumoDto(
+                name = it.originalName,
+                contentType = it.contentType,
+                size = it.sizeBytes,
+                submittedAt = it.submittedAt
+            )
+        }
     )
 
     // Visão interna (service-produtos): só o necessário para o catálogo

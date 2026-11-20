@@ -53,8 +53,10 @@ class AppUserService(
             is Producer -> when (user.status) {
                 ProducerStatus.pending ->
                     throw AccountBlockedException("Seu cadastro está em análise, aguarde aprovação")
-                ProducerStatus.rejected ->
-                    throw AccountBlockedException("Cadastro de produtor rejeitado")
+                // O motivo vem da análise do admin (Etapa 5.1): é a única forma de o produtor saber o que corrigir
+                ProducerStatus.rejected -> throw AccountBlockedException(
+                    user.rejectionReason?.let { "Cadastro de produtor rejeitado. Motivo: $it" } ?: "Cadastro de produtor rejeitado"
+                )
                 ProducerStatus.approved -> Unit
             }
             is Customer -> if (user.suspended) throw AccountBlockedException("Conta suspensa")

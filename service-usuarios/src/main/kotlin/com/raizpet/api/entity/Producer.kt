@@ -21,7 +21,7 @@ class Producer : AppUser() {
     @Column(name = "short_description", nullable = false, length = 500)
     var shortDescription: String = ""
 
-    // Todo produtor nasce em análise; aprovação/rejeição pelo admin fica para a próxima entrega
+    // Todo produtor nasce em análise; o admin aprova ou rejeita (Etapa 5.1, PATCH /produtores/{id}/status)
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     var status: ProducerStatus = ProducerStatus.pending
@@ -40,6 +40,13 @@ class Producer : AppUser() {
 
     @Column(name = "state", length = 2, columnDefinition = "CHAR(2)")
     var state: String? = null
+
+    // Resultado da análise (docs/db/alteracoes-etapa5-1.sql). O motivo só existe quando status = rejected
+    @Column(name = "rejection_reason", length = 500)
+    var rejectionReason: String? = null
+
+    @Column(name = "reviewed_at")
+    var reviewedAt: LocalDateTime? = null
 
     override val userType: UserType get() = UserType.producer
 }

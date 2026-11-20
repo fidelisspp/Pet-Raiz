@@ -65,7 +65,10 @@ service-usuarios (8081):
 - `POST /api/v1/auth` `{email, password}` → `{token}`. Senha errada → 400.
 - `GET /api/v1/usuarios/me` → `{id, name, email, phone, role, createdAt}`.
 - `POST /api/v1/usuarios/clientes` `{name, email, cpf, password, phone?}` → 201. E-mail/CPF repetido → 409; inválido → 422.
+- `POST /api/v1/usuarios/produtores`: JSON **ou** multipart (`dados` + `documento`, Etapa 5.1). O app usa o multipart.
 - `GET /api/v1/produtores`, `GET /api/v1/produtores/{id}` (públicos, só aprovados).
+- 403 do login de produtor: `"Seu cadastro está em análise, aguarde aprovação"` e
+  `"Cadastro de produtor rejeitado. Motivo: …"`. **O app reconhece essas frases pelo início: não mude sem avisar.**
 - Internas: `GET /interno/produtores/aprovados`, `GET /interno/clientes/{id}`.
 
 service-produtos (8080):
@@ -95,6 +98,11 @@ montar as telas.
 - Produtor tem `image_url`, `city`, `state`. Fotos dos produtores também são servidas pelo service-produtos.
 - Endereço padrão: sem coluna; o checkout usa o primeiro.
 - Remover produto = soft delete (`active=false`). "Rascunho" não existe.
+- Aprovação de produtor (Etapa 5.1): `pending → approved | rejected` e `rejected → pending` (reabrir); o resto é 409.
+  Rejeitar exige motivo (`reason`), que o produtor vê no 403 do login. Aprovado não muda mais.
+- Documento do cadastro: **qualquer formato**, até **5 MB**, em `./uploads/documentos/` (não é estático: só o ADMIN baixa).
+- Telas do admin sem base no back-end ficam **fora**: "cobrar produtor" (não há notificações), "reembolso"
+  (pagamento é simulado) e "remover cliente" (vira suspender/reativar).
 
 ## 6. Ambiente na minha máquina
 
@@ -109,6 +117,8 @@ montar as telas.
   alterada, suba uma instância temporária em outra porta (8083–8089), teste e desligue. No relatório, me diga
   quais serviços eu preciso reiniciar.
 - Cuidado conhecido: escrever `/**` dentro de um comentário KDoc `/** ... */` quebra a compilação em Kotlin.
+- Pouca memória (emulador + serviços abertos): o daemon do compilador Kotlin pode não subir
+  ("Failed connecting to the daemon"). Use `./mvnw test -Dkotlin.compiler.daemon=false`.
 - Dados de teste criados por você: limpe no final (ou me diga o que ficou).
 
 ## 7. O que falta (roteiro até a entrega)
@@ -146,6 +156,20 @@ real versionada (use variável de ambiente com padrão de dev). Commit "Estado d
 - Endereço já usado em pedido: bloquear também o PUT (409), igual ao DELETE.
 - Revisar Swagger dos 3 serviços e o `docs/API-CONTRATOS.md`.
 - README da raiz com: arquitetura, como subir, ordem dos scripts, usuários de teste.
+
+**Etapa 5.1 — Aprovação de produtor** (usuários). *Feita.*
+- `GET /api/v1/produtores/pendentes` e `GET /produtores/cadastros?status=` (ADMIN, paginados), `PATCH /produtores/{id}/status`
+  `{status, reason?}` (ADMIN), `GET /produtores/{id}/documento` (ADMIN).
+- `POST /usuarios/produtores` aceita multipart com o documento (tabela `producer_document`, que já existia).
+- Script `service-usuarios/docs/db/alteracoes-etapa5-1.sql`.
+
+**Etapas 5.2 a 5.6 — Telas do admin** (uma por vez, cada uma com plano, testes e relatório):
+- **5.2 Categorias** (produtos): `POST`, `PUT`, `DELETE /api/v1/categorias` (ADMIN). Excluir categoria com produtos → 409.
+- **5.3 Clientes** (usuários): `GET /clientes` já existe; `PATCH /api/v1/clientes/{id}/suspensao` (suspender/reativar).
+- **5.4 Produtos** (produtos): listar todos os produtos (de qualquer produtor, com produtor e categoria) e remover (soft delete), ADMIN.
+- **5.5 Pedidos** (pedidos): listar todos os pedidos, cancelar (devolvendo o estoque pela rota interna de estorno)
+  e corrigir o status de uma parte, ADMIN.
+- **5.6 Início do admin**: números reais (pedidos, entregas atrasadas, clientes, produtos publicados) a partir das rotas acima.
 
 **Etapa 6 — A confirmar comigo** (não comece sem eu pedir): recuperação de senha, avaliações de produto
 (possível `service-avaliacoes` na porta 8084), ingredientes.

@@ -96,7 +96,7 @@ responde 503 enquanto ele não estiver no ar.
 | `INTERNAL_KEY` | não | `troque-esta-chave-interna-petraiz` | os 3 (precisa ser igual nos 3) |
 | `USUARIOS_URL` | não | `http://localhost:8081` | produtos e pedidos |
 | `PRODUTOS_URL` | não | `http://localhost:8080` | pedidos |
-| `UPLOADS_DIR` | não | `./uploads` (relativo à pasta onde o serviço roda) | produtos |
+| `UPLOADS_DIR` | não | `./uploads` (relativo à pasta onde o serviço roda) | produtos (fotos) e usuários (documentos de cadastro, Etapa 5.1) |
 
 Em produção, `JWT_SECRET` e `INTERNAL_KEY` devem ser trocados.
 
@@ -119,7 +119,7 @@ Get-Content <arquivo> -Raw -Encoding UTF8 | mysql -u root -p --default-character
 | # | Script | Banco(s) |
 |---|---|---|
 | 1 | `criar-bancos.sql` | (nenhum: cria os 6 bancos) |
-| 2 | `service-usuarios/docs/db/schema-usuarios.sql` + `alteracoes-etapa2.sql` | `pet_usuarios_db` e `pet_usuarios_db_test` |
+| 2 | `service-usuarios/docs/db/schema-usuarios.sql` + `alteracoes-etapa2.sql` + `alteracoes-etapa5-1.sql` | `pet_usuarios_db` e `pet_usuarios_db_test` |
 | 3 | `service-produtos/docs/db/schema-produtos.sql` + `alteracoes-etapa2.sql` | `pet_produtos_db` e `pet_produtos_db_test` |
 | 4 | `service-pedidos/docs/db/schema-pedidos.sql` + `alteracoes-etapa2.sql` | `pet_pedidos_db` e `pet_pedidos_db_test` |
 | 5 | `service-usuarios/docs/db/migracao-de-pet-raiz.sql` | (nomes qualificados; lê `pet_raizdb`) |
@@ -132,7 +132,10 @@ As migrações (5 a 7) copiam os dados do banco do monolito (`pet_raizdb`) mante
 que mantém `product.producer_id` válido sem FK, e só fazem `SELECT` nele. Os bancos `_test` recebem
 só schema + alterações: os dados de teste vêm do `@Sql` de cada serviço.
 
-As etapas 1 a 5 do roteiro não alteraram tabelas: não há script novo depois do `alteracoes-etapa2.sql`.
+As etapas 1 a 5 do roteiro não alteraram tabelas. A Etapa 5.1 (aprovação de produtor) acrescentou
+`service-usuarios/docs/db/alteracoes-etapa5-1.sql` (motivo e data da análise em `producer`; nome, tipo e
+tamanho do documento em `producer_document`). Ele aceita bancos já populados: rode depois do
+`alteracoes-etapa2.sql`, também em quem já tinha os bancos montados.
 
 ## Usuários de teste
 

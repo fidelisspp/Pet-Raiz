@@ -52,6 +52,10 @@ class SpringSecurityConfig {
                     // casa com "/produtores/me" e, como vale a primeira regra que casar, a rota ficaria pública.
                     // Aqui só exige token; o perfil PRODUCER é conferido pelo @PreAuthorize (403 em ErrorMessage).
                     .requestMatchers(HttpMethod.GET, "/api/v1/produtores/me").authenticated()
+                    // Análise de cadastros (ADMIN, Etapa 5.1): mesmo motivo do /me. "/produtores/pendentes" e
+                    // "/produtores/cadastros" casam com "/produtores/*" e ficariam públicas se viessem depois.
+                    // (PATCH /produtores/*/status e GET /produtores/*/documento já caem no anyRequest().authenticated().)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/produtores/pendentes", "/api/v1/produtores/cadastros").authenticated()
                     // Vitrine pública dos produtores (só aprovados; quem filtra é o ProducerService).
                     .requestMatchers(HttpMethod.GET, "/api/v1/produtores", "/api/v1/produtores/*").permitAll()
                     // Só outros serviços, com X-Internal-Key (InternoKeyFilter dá o ROLE_SERVICE)
