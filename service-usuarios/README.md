@@ -42,7 +42,8 @@ token com a mesma `petraiz.jwt.secret-key` e usam `id` e `role` das claims.
 | GET | `/usuarios/{id}` | ADMIN ou o próprio | Busca usuário |
 | PATCH | `/usuarios/{id}` | o próprio | Troca de senha |
 | GET | `/usuarios` | ADMIN | Lista usuários |
-| GET | `/clientes`, `/clientes/{id}` | ADMIN | Clientes |
+| GET | `/clientes`, `/clientes/{id}` | ADMIN | Clientes. A lista aceita `busca` (nome ou e-mail) e `suspenso` (true/false) (Etapa 5.3) |
+| PATCH | `/clientes/{id}/suspensao` | ADMIN | `{suspended}`: suspende ou reativa; suspenso não faz login nem finaliza compra (Etapa 5.3) |
 | GET | `/produtores/me` | PRODUCER | Perfil do produtor logado `{id, companyName, shortDescription, imageUrl, city, state, status}`. A regra de segurança vem **antes** do `permitAll` de `/produtores/*` |
 | GET | `/produtores` | público | Produtores **aprovados**, paginado (`page`, `size`, `sort`; padrão `companyName`) |
 | GET | `/produtores/{id}` | público | Produtor aprovado; pendente, rejeitado ou inexistente → 404 |

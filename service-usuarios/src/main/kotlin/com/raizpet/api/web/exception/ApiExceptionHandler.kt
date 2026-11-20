@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.multipart.MaxUploadSizeExceededException
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import com.raizpet.api.service.DocumentoService
 
 @RestControllerAdvice
@@ -95,6 +96,19 @@ class ApiExceptionHandler {
         ex: ParametroInvalidoException,
         request: HttpServletRequest
     ): ResponseEntity<ErrorMessage> = error(ex, request, HttpStatus.BAD_REQUEST)
+
+    // Ex.: ?suspenso=talvez ou /clientes/abc (Etapa 5.3)
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun methodArgumentTypeMismatchException(
+        ex: MethodArgumentTypeMismatchException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.info("Parâmetro inválido: {}={}", ex.name, ex.value)
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(ErrorMessage(request, HttpStatus.BAD_REQUEST, "Parâmetro inválido: ${ex.name}=${ex.value}"))
+    }
 
     @ExceptionHandler(PasswordInvalidException::class)
     fun passwordInvalidException(

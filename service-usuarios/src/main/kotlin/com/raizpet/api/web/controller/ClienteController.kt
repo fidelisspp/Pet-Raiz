@@ -1,5 +1,10 @@
 package com.raizpet.api.web.controller
 
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.PatchMapping
+import jakarta.validation.Valid
+import com.raizpet.api.web.dto.ClienteSuspensaoDto
 import com.raizpet.api.config.SpringDocOpenApiConfig.Companion.SECURITY_SCHEME
 import com.raizpet.api.service.CustomerService
 import com.raizpet.api.web.dto.ClienteResponseDto
@@ -24,7 +29,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-@Tag(name = "Clientes", description = "Consulta de clientes (restrito a ADMIN)")
+@Tag(name = "Clientes", description = "Consulta, busca e suspensão de clientes (restrito a ADMIN)")
 @RestController
 @RequestMapping("/api/v1/clientes")
 class ClienteController(private val customerService: CustomerService) {
@@ -53,9 +58,21 @@ class ClienteController(private val customerService: CustomerService) {
         ResponseEntity.ok(ClienteMapper.toDto(customerService.buscarPorId(id)))
 
     @Operation(
-        summary = "Recuperar lista de clientes", description = "Requisição exige um Bearer Token. Acesso restrito a ADMIN.",
+        summary = "Recuperar lista de clientes",
+        description = "Requisição exige um Bearer Token. Acesso restrito a ADMIN. " +
+            "Filtros opcionais (Etapa 5.3): busca (trecho do nome ou do e-mail) e suspenso (true/false).",
         security = [SecurityRequirement(name = SECURITY_SCHEME)],
         parameters = [
+            Parameter(
+                `in` = ParameterIn.QUERY, name = "busca",
+                content = [Content(schema = Schema(type = "string"))],
+                description = "Trecho do nome ou do e-mail (opcional)"
+            ),
+            Parameter(
+                `in` = ParameterIn.QUERY, name = "suspenso",
+                content = [Content(schema = Schema(type = "boolean"))],
+                description = "true = só suspensos; false = só ativos; ausente = todos"
+            ),
             Parameter(
                 `in` = ParameterIn.QUERY, name = "page",
                 content = [Content(schema = Schema(type = "integer", defaultValue = "0"))],
@@ -85,8 +102,33 @@ class ClienteController(private val customerService: CustomerService) {
     )
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    fun getAll(@Parameter(hidden = true) @PageableDefault(size = 5, sort = ["name"]) pageable: Pageable): ResponseEntity<PageableDto> {
-        val clientes = customerService.buscarTodos(pageable).map(ClienteMapper::toDto)
+    fun getAll(
+        @RequestParam(required = false) busca: String?,
+        @RequestParam(required = false) suspenso: Boolean?,
+        @Parameter(hidden = true) @PageableDefault(size = 5, sort = ["name"]) pageable: Pageable
+    ): ResponseEntity<PageableDto> {
+        val clientes = customerService.buscarParaAdmin(busca, suspenso, pageable).map(ClienteMapper::toDto)
         return ResponseEntity.ok(PageableMapper.toDto(clientes))
     }
+
+    @Operation(
+        summary = "Suspender ou reativar cliente",
+        description = "Requisição exige um Bearer Token. Acesso restrito a ADMIN. " +
+            "{suspended: true} suspende (o cliente não faz login nem finaliza compras); false reativa. Idempotente.",
+        security = [SecurityRequirement(name = SECURITY_SCHEME)],
+        responses = [
+            ApiResponse(
+                responseCode = "200", description = "Cliente com o novo status",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ClienteResponseDto::class))]
+            ),
+            ApiResponse(responseCode = "401", description = "Token ausente ou inválido", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]),
+            ApiResponse(responseCode = "403", description = "Perfil diferente de ADMIN", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]),
+            ApiResponse(responseCode = "404", description = "Cliente não encontrado", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]),
+            ApiResponse(responseCode = "422", description = "suspended ausente", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))])
+        ]
+    )
+    @PatchMapping("/{id}/suspensao")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun patchSuspensao(@PathVariable id: Int, @Valid @RequestBody dto: ClienteSuspensaoDto): ResponseEntity<ClienteResponseDto> =
+        ResponseEntity.ok(ClienteMapper.toDto(customerService.alterarSuspensao(id, dto.suspended!!)))
 }

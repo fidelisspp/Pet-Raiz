@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 5.2 (categorias do admin). Próximas: 5.3 a 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
+**Estado:** Etapa 5.3 (clientes do admin). Próximas: 5.4 a 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
 
 ### Mudanças por etapa
 
@@ -13,6 +13,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 | 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
 | 5 | **Alterada:** `PUT /enderecos/{id}` passa a responder **409** quando o endereço já foi usado em pedido (igual ao `DELETE`). Antes, alterava e o pedido antigo mostrava o endereço novo |
+| 5.3 | **Alterada (compatível, ADMIN, usuários):** `GET /clientes` aceita `busca` e `suspenso`. **Novas:** `PATCH /clientes/{id}/suspensao` (usuários), `GET /pedidos/admin/clientes?ids=` (pedidos) |
 | 5.2 | **Novas (ADMIN, produtos):** `GET /categorias/resumo` (com contagem de produtos), `POST /categorias`, `PUT /categorias/{id}`, `DELETE /categorias/{id}`. `GET /categorias` público **inalterado** |
 | 5.1 | **Novas (ADMIN, usuários):** `GET /produtores/pendentes`, `GET /produtores/cadastros?status=`, `PATCH /produtores/{id}/status`, `GET /produtores/{id}/documento`. **Alterada (compatível):** `POST /usuarios/produtores` também aceita **multipart** (`dados` + `documento`); o JSON continua igual. **Alterada:** o 403 do login de produtor rejeitado agora traz o motivo: `"Cadastro de produtor rejeitado. Motivo: …"` |
 
@@ -142,6 +143,15 @@ Erro: 404 inexistente, pendente ou rejeitado.
 
 ### `GET /api/v1/clientes` e `GET /api/v1/clientes/{id}` — ADMIN
 Página (padrão 5, `name,asc`) / objeto `{ id, name, email, phone, cpf, suspended }`. Erros: 403 · 404.
+
+**Busca, filtro e suspensão** *(Etapa 5.3)*:
+- `GET /api/v1/clientes?busca=&suspenso=&page=&size=`: `busca` = trecho do nome **ou** do e-mail (sem diferenciar maiúscula;
+  em branco = sem busca); `suspenso` = `true` (só suspensos) | `false` (só ativos) | ausente (todos).
+  Valor inválido (ex.: `suspenso=talvez`) → 400. Sem os filtros, o comportamento é o de antes.
+- `PATCH /api/v1/clientes/{id}/suspensao` com `{ "suspended": true | false }` → 200 `{ id, name, email, phone, cpf, suspended }`.
+  Idempotente. Erros: 401 · 403 · 404 (inexistente ou não é cliente) · 422 (`suspended` ausente).
+- **Efeitos da suspensão:** o login responde 403 `"Conta suspensa"` e o checkout do service-pedidos recusa (ele consulta
+  `/interno/clientes/{id}`). Um token já emitido continua válido até expirar (8 h). Pedidos já feitos não mudam.
 
 ---
 
@@ -335,6 +345,18 @@ Cada "pedido recebido" é a **parte do produtor** num pedido (os itens dele). S�
 - `items[].productImageUrl` e `productName` são cópias do momento da compra.
 
 ---
+
+### Visão do ADMIN — `/api/v1/pedidos/admin` *(Etapa 5.3)*
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/pedidos/admin/clientes?ids=101,102` | — | 200 `[ { customerId, orders, totalSpent } ]` | 400 `ids` vazio, não numérico ou mais de 100 · 401 · 403 |
+
+- Para a tela **Clientes** do admin: o app manda os ids da página que veio do service-usuarios e junta as duas respostas.
+  (O service-usuarios não chama o de pedidos: o de pedidos já chama o de usuários, e o contrário criaria um ciclo.)
+- `orders` = pedidos **pagos**; `totalSpent` = soma do `totalAmount` (itens + frete) desses pedidos.
+- Um item por id, na ordem pedida (repetidos aparecem uma vez); cliente sem pedido pago → `0` e `0.00`.
+- Se o service-pedidos estiver fora do ar, o app mostra a lista de clientes mesmo assim, sem os números de compras.
 
 ## Rotas internas (não usar no app)
 

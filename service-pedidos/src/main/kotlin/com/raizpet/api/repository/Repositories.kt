@@ -45,6 +45,20 @@ interface PurchaseOrderRepository : JpaRepository<PurchaseOrder, Int> {
     fun findAllByCustomerId(customerId: Int, pageable: Pageable): Page<PurchaseOrder>
 
     fun existsByAddressId(addressId: Int): Boolean
+
+    /**
+     * Admin (Etapa 5.3): por cliente, [0] customerId, [1] quantidade de pedidos PAGOS e [2] soma do total deles.
+     * Cliente sem pedido pago não aparece (o serviço completa com zero).
+     */
+    @Query(
+        """
+        SELECT o.customerId, COUNT(o), SUM(o.totalAmount)
+        FROM PurchaseOrder o JOIN o.payment p
+        WHERE p.status = com.raizpet.api.entity.PaymentStatus.paid AND o.customerId IN :ids
+        GROUP BY o.customerId
+        """
+    )
+    fun resumirPagosPorCliente(ids: Collection<Int>): List<Array<Any>>
 }
 
 /*

@@ -1,5 +1,6 @@
 package com.raizpet.api.web.exception
 
+import com.raizpet.api.exception.ParametroInvalidoException
 import com.raizpet.api.exception.CarrinhoVazioException
 import com.raizpet.api.exception.ClienteBloqueadoException
 import com.raizpet.api.exception.ConflitoException
@@ -107,6 +108,16 @@ class ApiExceptionHandler {
     ): ResponseEntity<ErrorMessage> {
         log.error("Api Error - 500 {}", ex.message)
         return body(request, HttpStatus.INTERNAL_SERVER_ERROR, ex.message)
+    }
+
+    // Ex.: ?ids= vazio ou com mais de 100 (Etapa 5.3)
+    @ExceptionHandler(ParametroInvalidoException::class)
+    fun parametroInvalidoException(
+        ex: ParametroInvalidoException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.info("Parâmetro inválido: {}", ex.message)
+        return body(request, HttpStatus.BAD_REQUEST, ex.message)
     }
 
     // Ex.: /pedidos/abc

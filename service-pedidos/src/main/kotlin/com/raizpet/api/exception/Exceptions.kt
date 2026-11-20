@@ -21,3 +21,6 @@ class ServicoIndisponivelException(message: String) : RuntimeException(message)
  * estornado (ou, se nem o estorno funcionou, ficou registrado no log de erro para correção manual).
  */
 class PedidoNaoCriadoException(message: String) : RuntimeException(message)
+
+/** Parâmetro de consulta inválido (ex.: ?ids= vazio ou com mais de 100): vira 400. */
+class ParametroInvalidoException(message: String) : RuntimeException(message)

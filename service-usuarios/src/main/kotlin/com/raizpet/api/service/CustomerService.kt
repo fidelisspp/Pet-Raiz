@@ -38,4 +38,21 @@ class CustomerService(
 
     @Transactional(readOnly = true)
     fun buscarTodos(pageable: Pageable): Page<Customer> = customerRepository.findAll(pageable)
+
+    /** Lista do admin com busca (nome ou e-mail) e filtro de suspensão, ambos opcionais (Etapa 5.3). */
+    @Transactional(readOnly = true)
+    fun buscarParaAdmin(busca: String?, suspenso: Boolean?, pageable: Pageable): Page<Customer> =
+        customerRepository.buscarParaAdmin(busca?.trim()?.takeIf { it.isNotEmpty() }, suspenso, pageable)
+
+    /**
+     * Suspende ou reativa (idempotente: repetir o mesmo valor só devolve o cliente).
+     * Suspenso não consegue fazer login (403 "Conta suspensa") nem finalizar compra (o checkout do
+     * service-pedidos consulta /interno/clientes/{id}). Um token já emitido continua valendo até expirar (8 h).
+     */
+    @Transactional
+    fun alterarSuspensao(id: Int, suspenso: Boolean): Customer {
+        val customer = buscarPorId(id)
+        customer.suspended = suspenso
+        return customer
+    }
 }

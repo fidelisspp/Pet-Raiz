@@ -3,6 +3,16 @@ package com.raizpet.api.web.dto
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
+/**
+ * Admin (Etapa 5.3): resumo de compras de um cliente para a tela "Clientes".
+ * orders = pedidos pagos; totalSpent = soma do total (itens + frete) desses pedidos.
+ */
+data class ClienteComprasDto(
+    val customerId: Int,
+    val orders: Long,
+    val totalSpent: BigDecimal
+)
+
 data class EnderecoResponseDto(
     val id: Int,
     val label: String?,

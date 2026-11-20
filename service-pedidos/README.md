@@ -114,3 +114,12 @@ O que esta versão simplificada **não** cobre, de propósito:
   Quem garante o estoque é a reserva no checkout.
 - **Produtor não é conferido** no checkout: só o produto (ativo e com estoque). O catálogo já
   esconde produto de produtor não aprovado.
+
+## Visão do ADMIN (Etapa 5.3)
+
+`PedidoAdminController` (`/api/v1/pedidos/admin`, `@PreAuthorize("hasRole('ADMIN')")`), separado do
+`PedidoController`, que é todo CUSTOMER.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/pedidos/admin/clientes?ids=` | Por cliente: pedidos **pagos** (`orders`) e total gasto (`totalSpent`). Até 100 ids |
