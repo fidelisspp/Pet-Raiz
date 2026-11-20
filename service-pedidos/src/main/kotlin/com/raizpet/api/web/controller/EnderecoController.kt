@@ -100,7 +100,8 @@ class EnderecoController(private val enderecoService: EnderecoService) {
 
     @Operation(
         summary = "Alterar endereço",
-        description = "Substitui todos os campos. Pedidos já feitos com este endereço passam a mostrar os dados novos.",
+        description = "Substitui todos os campos. Endereço já usado em pedido não pode ser alterado (409), " +
+            "igual ao DELETE: para entregar em outro lugar, cadastre um endereço novo.",
         security = [SecurityRequirement(name = SECURITY_SCHEME)],
         responses = [
             ApiResponse(
@@ -109,6 +110,10 @@ class EnderecoController(private val enderecoService: EnderecoService) {
             ),
             ApiResponse(
                 responseCode = "404", description = "Endereço inexistente ou de outro cliente",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            ),
+            ApiResponse(
+                responseCode = "409", description = "Endereço já usado em pedido",
                 content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
             ),
             ApiResponse(

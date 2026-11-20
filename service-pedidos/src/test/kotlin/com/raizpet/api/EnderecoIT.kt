@@ -117,6 +117,25 @@ class EnderecoIT : IntegracaoBase() {
         esperarErro(put(500, Tokens.clienteBia(), """{"recipientName":"X"}"""), 422)
     }
 
+    @Test
+    fun atualizar_EnderecoUsadoEmPedido_RetornarErrorMessageStatus409SemAlterar() {
+        // 501 é o endereço do pedido 701 da Bia
+        val erro = esperarErro(put(501, Tokens.clienteBia(), novo), 409)
+        assertThat(erro.message).contains("pedido").contains("alterado")
+        assertThat(jdbc.queryForObject("SELECT street FROM address WHERE id = 501", String::class.java)).isEqualTo("Av. Paulista")
+
+        // O pedido continua mostrando o endereço original
+        testClient.get().uri("/api/v1/pedidos/701").headers(Tokens.clienteBia()).exchange()
+            .expectStatus().isOk
+            .expectBody().jsonPath("$.address.street").isEqualTo("Av. Paulista")
+    }
+
+    @Test
+    fun atualizar_EnderecoUsadoEmPedidoDeOutroCliente_Retornar404AntesDo409() {
+        // 502 é do Bob e foi usado no pedido 700: para a Bia ele "não existe"
+        esperarErro(put(502, Tokens.clienteBia(), novo), 404)
+    }
+
     // ---------- DELETE ----------
 
     @Test

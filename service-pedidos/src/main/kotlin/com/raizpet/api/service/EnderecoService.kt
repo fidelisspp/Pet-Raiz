@@ -32,9 +32,18 @@ class EnderecoService(
     fun criar(dto: EnderecoDto, customerId: Int): Address =
         addressRepository.save(EnderecoMapper.copiar(dto).apply { this.customerId = customerId })
 
+    /**
+     * O pedido guarda só o address_id (não copia o endereço). Se o PUT fosse permitido, um pedido já
+     * feito (inclusive o que o produtor está enviando) passaria a mostrar outro endereço. Por isso
+     * endereço já usado em pedido não pode ser alterado: 409. Para entregar em outro lugar, o cliente
+     * cadastra um endereço novo.
+     */
     @Transactional
-    fun atualizar(id: Int, dto: EnderecoDto, customerId: Int): Address =
-        EnderecoMapper.copiar(dto, buscar(id, customerId))
+    fun atualizar(id: Int, dto: EnderecoDto, customerId: Int): Address {
+        val address = buscar(id, customerId)
+        bloquearSeUsadoEmPedido(id, "alterado")
+        return EnderecoMapper.copiar(dto, address)
+    }
 
     /**
      * O pedido aponta para o endereço (fk_purchase_order_address), então endereço já usado em pedido
@@ -43,9 +52,13 @@ class EnderecoService(
     @Transactional
     fun excluir(id: Int, customerId: Int) {
         val address = buscar(id, customerId)
-        if (purchaseOrderRepository.existsByAddressId(id)) {
-            throw ConflitoException("Endereço id=$id já foi usado em um pedido e não pode ser excluído")
-        }
+        bloquearSeUsadoEmPedido(id, "excluído")
         addressRepository.delete(address)
+    }
+
+    private fun bloquearSeUsadoEmPedido(id: Int, acao: String) {
+        if (purchaseOrderRepository.existsByAddressId(id)) {
+            throw ConflitoException("Endereço id=$id já foi usado em um pedido e não pode ser $acao")
+        }
     }
 }

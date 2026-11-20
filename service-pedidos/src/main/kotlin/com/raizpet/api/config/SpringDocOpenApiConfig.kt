@@ -2,6 +2,12 @@ package com.raizpet.api.config
 
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.media.Content
+import io.swagger.v3.oas.models.media.MediaType
+import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.responses.ApiResponses
+import org.springdoc.core.customizers.OpenApiCustomizer
 import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.info.License
@@ -24,12 +30,34 @@ class SpringDocOpenApiConfig {
             .info(
                 Info()
                     .title("REST API - Pet Raiz - service-pedidos")
-                    .description("Endereços, carrinho e pedidos do cliente (perfil CUSTOMER). Produtos e estoque vêm do " +
-                        "service-produtos; a situação do cliente (suspenso) vem do service-usuarios.")
+                    .description("Endereços, carrinho, favoritos e pedidos do cliente (perfil CUSTOMER) e pedidos recebidos " +
+                        "pelo produtor (perfil PRODUCER). Produtos e estoque vêm do service-produtos; a situação do " +
+                        "cliente (suspenso) vem do service-usuarios.")
                     .version("v1")
                     .license(License().name("Apache 2.0").url("https://www.apache.org/licenses/LICENSE-2.0"))
                     .contact(Contact().name("Equipe Pet Raiz - PI Senac"))
             )
+
+    /**
+     * Toda rota protegida por token documenta o 401 (token ausente, inválido ou expirado). Em vez de
+     * repetir o @ApiResponse em cada endpoint, este customizador acrescenta o 401 onde faltar e deixa
+     * as respostas em ordem de código. Rotas públicas (sem security) não são alteradas.
+     */
+    @Bean
+    fun respostas401(): OpenApiCustomizer = OpenApiCustomizer { api ->
+        api.paths?.values?.flatMap { it.readOperations() }?.forEach { op ->
+            val respostas = op.responses ?: return@forEach
+            if (!op.security.isNullOrEmpty() && !respostas.containsKey("401")) {
+                respostas.addApiResponse(
+                    "401",
+                    ApiResponse()
+                        .description("Token ausente, inválido ou expirado")
+                        .content(Content().addMediaType("application/json", MediaType().schema(Schema<Any>().`$ref`("#/components/schemas/ErrorMessage"))))
+                )
+                op.responses = ApiResponses().apply { respostas.toSortedMap().forEach { (codigo, r) -> addApiResponse(codigo, r) } }
+            }
+        }
+    }
 
     private fun securityScheme(): SecurityScheme =
         SecurityScheme()

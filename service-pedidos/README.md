@@ -32,7 +32,7 @@ carrinho) responde **404**, como se não existisse.
 | GET | `/enderecos` | Endereços do cliente, por id |
 | GET | `/enderecos/{id}` | Um endereço |
 | POST | `/enderecos` | `{label?, recipientName, street, number, complement?, neighborhood, city, state, zipCode}` → 201. `state` vira maiúsculo, `zipCode` vira `00000-000` |
-| PUT | `/enderecos/{id}` | Troca todos os campos. Pedido feito com esse endereço passa a mostrar os dados novos |
+| PUT | `/enderecos/{id}` | Troca todos os campos. **409** se o endereço já foi usado em pedido (o pedido guarda só o `address_id`; alterar mudaria o endereço de uma compra já feita) |
 | DELETE | `/enderecos/{id}` | 204; **409** se o endereço já foi usado em pedido (FK `fk_purchase_order_address`) |
 | GET | `/carrinho` | Criado vazio no 1º acesso. Itens com `name, price, stock, imageUrl, producerId` do service-produtos, `quantity`, `subtotal`, `available`; `totalQuantity` e `subtotal` (sem frete) |
 | POST | `/carrinho/itens` | `{productId, quantity}`. Já no carrinho → **soma**. Passou do estoque → 409 (`errors = {productId: motivo}`); inativo → 409; inexistente → 404 |

@@ -28,10 +28,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * Vitrine pública dos produtores (home do app, filtro "Produtor" e página do produtor).
- * Não confundir com POST /api/v1/usuarios/produtores, que é o cadastro.
+ * Vitrine pública dos produtores (home do app, filtro "Produtor" e página do produtor) e o perfil do
+ * produtor logado (GET /me). Não confundir com POST /api/v1/usuarios/produtores, que é o cadastro.
  */
-@Tag(name = "Produtores", description = "Dados públicos dos produtores aprovados")
+@Tag(name = "Produtores", description = "Dados públicos dos produtores aprovados e perfil do produtor logado (/me)")
 @RestController
 @RequestMapping("/api/v1/produtores")
 class ProdutorController(private val producerService: ProducerService) {

@@ -73,7 +73,8 @@ data class PagamentoResponseDto(
 /**
  * Pedido completo: itens agrupados por produtor.
  * itemsAmount = soma dos itens; totalAmount = itemsAmount + shippingAmount (= payment.amount).
- * address é o endereço atual (a tabela address é editável; o pedido guarda só o address_id).
+ * address vem da tabela address (o pedido guarda só o address_id); endereço usado em pedido não pode mais
+ * ser alterado nem excluído, então é sempre o endereço da compra.
  */
 data class PedidoResponseDto(
     val id: Int,
@@ -92,7 +93,7 @@ data class PedidoResponseDto(
  * id = id do grupo (é o {grupoId} das rotas); orderId = id do pedido do cliente.
  * total = soma só dos itens dele (o frete é do pedido inteiro e não entra aqui).
  * nextStatus = status que o PATCH aceita agora (null quando já está delivered).
- * address é o endereço atual da tabela address (o pedido guarda só o address_id).
+ * address vem da tabela address; endereço usado em pedido é bloqueado para PUT/DELETE (409), então não muda.
  */
 data class PedidoRecebidoResponseDto(
     val id: Int,

@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 4 (favoritos).
+**Estado:** Etapa 5 (acabamento). Todas as rotas do roteiro de entrega estão prontas.
 
 ### Mudanças por etapa
 
@@ -12,6 +12,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 2 | **Nova:** `POST /produtos/meus/imagens` (upload multipart). As fotos enviadas são servidas no mesmo `GET /images/**` |
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 | 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
+| 5 | **Alterada:** `PUT /enderecos/{id}` passa a responder **409** quando o endereço já foi usado em pedido (igual ao `DELETE`). Antes, alterava e o pedido antigo mostrava o endereço novo |
 
 ## Convenções
 
@@ -174,11 +175,13 @@ Arquivos de imagem (produtos e fotos de produtores), incluindo as fotos enviadas
 | `GET /api/v1/enderecos` | — | 200 lista (por id) | — |
 | `GET /api/v1/enderecos/{id}` | — | 200 endereço | 404 |
 | `POST /api/v1/enderecos` | `EnderecoDto` | 201 endereço | 422 |
-| `PUT /api/v1/enderecos/{id}` | `EnderecoDto` | 200 endereço | 404 · 422 |
+| `PUT /api/v1/enderecos/{id}` | `EnderecoDto` | 200 endereço | 404 · 409 já usado em pedido *(Etapa 5)* · 422 |
 | `DELETE /api/v1/enderecos/{id}` | — | 204 | 404 · 409 já usado em pedido |
 
 `EnderecoDto`: `{ label?: ≤50, recipientName: ≤100, street: ≤200, number: ≤10, complement?: ≤100, neighborhood, city, state: "SP", zipCode: "00000-000" }`
 Resposta: os mesmos campos + `id`. Sem "endereço padrão": o app usa o primeiro da lista.
+
+**Endereço usado em pedido fica congelado:** `PUT` e `DELETE` respondem 409 (`message`: "Endereço id=… já foi usado em um pedido e não pode ser alterado/excluído"). O pedido guarda só o `address_id`, então alterar mudaria o endereço de entrega de uma compra já feita (inclusive o que o produtor vê). No app: ao receber 409, sugerir cadastrar um endereço novo.
 
 ### Carrinho
 
