@@ -29,7 +29,8 @@ Cada banco tem também um `_test`, usado pelo `./mvnw test` do serviço.
 A senha do MySQL não fica no código: defina `DB_PASSWORD` antes de subir ou testar cada serviço
 (no IntelliJ: Run Configuration → Environment variables → `DB_PASSWORD=<sua senha>`; no terminal:
 `$env:DB_PASSWORD="<sua senha>"; .\mvnw test`). Sem ela o serviço não conecta no banco.
-Opcionais (têm padrão de dev): `DB_USERNAME` (root), `JWT_SECRET`, `INTERNAL_KEY`, `USUARIOS_URL`, `PRODUTOS_URL`.
+Opcionais (têm padrão de dev): `DB_USERNAME` (root), `JWT_SECRET`, `INTERNAL_KEY`, `USUARIOS_URL`, `PRODUTOS_URL`,
+`UPLOADS_DIR` (service-produtos; pasta das fotos enviadas, padrão `./uploads`).
 
 ## Montar os bancos (ordem importa)
 

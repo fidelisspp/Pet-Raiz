@@ -1,9 +1,11 @@
 package com.raizpet.api.web.exception
 
+import com.raizpet.api.exception.ArquivoInvalidoException
 import com.raizpet.api.exception.EntityNotFoundException
 import com.raizpet.api.exception.EstoqueInsuficienteException
 import com.raizpet.api.exception.ParametroInvalidoException
 import com.raizpet.api.exception.ServicoIndisponivelException
+import com.raizpet.api.service.ImagemService
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -11,10 +13,12 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
+import org.springframework.web.HttpMediaTypeNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
@@ -27,6 +31,36 @@ class ApiExceptionHandler {
         ex: EntityNotFoundException,
         request: HttpServletRequest
     ): ResponseEntity<ErrorMessage> = error(ex, request, HttpStatus.NOT_FOUND)
+
+    // Upload recusado: 422 com errors.arquivo, no mesmo formato da validação de campos
+    @ExceptionHandler(ArquivoInvalidoException::class)
+    fun arquivoInvalidoException(
+        ex: ArquivoInvalidoException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.info("Upload recusado: {}", ex.message)
+        return arquivoInvalido(request, ex.message ?: ImagemService.MSG_TIPO)
+    }
+
+    // Arquivo acima de spring.servlet.multipart.max-file-size: o Spring recusa antes de chegar ao controller
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun maxUploadSizeExceededException(
+        ex: MaxUploadSizeExceededException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.info("Upload recusado: acima do limite ({})", ex.message)
+        return arquivoInvalido(request, ImagemService.MSG_TAMANHO)
+    }
+
+    // Ex.: upload enviado como JSON em vez de multipart/form-data
+    @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
+    fun httpMediaTypeNotSupportedException(
+        ex: HttpMediaTypeNotSupportedException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.info("Content-Type não suportado: {}", ex.contentType)
+        return body(request, HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type não suportado: ${ex.contentType}")
+    }
 
     // Imagem (ou rota) inexistente: 404 no mesmo formato, sem stack trace no log
     @ExceptionHandler(NoResourceFoundException::class)
@@ -118,6 +152,23 @@ class ApiExceptionHandler {
                     HttpStatus.UNPROCESSABLE_ENTITY,
                     "Campo(s) invalido(s)",
                     ex.bindingResult
+                )
+            )
+    }
+
+    private fun arquivoInvalido(request: HttpServletRequest, motivo: String): ResponseEntity<ErrorMessage> {
+        val status = HttpStatus.UNPROCESSABLE_ENTITY
+        return ResponseEntity
+            .status(status)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(
+                ErrorMessage(
+                    path = request.requestURI,
+                    method = request.method,
+                    status = status.value(),
+                    statusText = status.reasonPhrase,
+                    message = "Arquivo inválido",
+                    errors = mapOf("arquivo" to motivo)
                 )
             )
     }

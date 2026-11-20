@@ -2,7 +2,9 @@ package com.raizpet.api.web.controller
 
 import com.raizpet.api.config.SpringDocOpenApiConfig.Companion.SECURITY_SCHEME
 import com.raizpet.api.jwt.JwtUsuario
+import com.raizpet.api.service.ImagemService
 import com.raizpet.api.service.ProductService
+import com.raizpet.api.web.dto.ImagemResponseDto
 import com.raizpet.api.web.dto.PageableDto
 import com.raizpet.api.web.dto.ProdutoCreateDto
 import com.raizpet.api.web.dto.ProdutoCriadoResponseDto
@@ -21,10 +23,13 @@ import jakarta.validation.Valid
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.web.PageableDefault
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 
 /**
  * Área do produtor: os produtos do dono do token (claim id), inclusive com estoque 0.
@@ -36,7 +41,47 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/v1/produtos/meus")
 @PreAuthorize("hasRole('PRODUCER')")
-class ProdutoMeuController(private val productService: ProductService) {
+class ProdutoMeuController(
+    private val productService: ProductService,
+    private val imagemService: ImagemService
+) {
+
+    @Operation(
+        summary = "Enviar foto de produto",
+        description = "Requisição exige um Bearer Token de PRODUCER. multipart/form-data com o arquivo no campo " +
+            "\"arquivo\". Aceita jpg, jpeg, png ou webp (conferido pelo conteúdo, não pelo nome) até 2 MB. " +
+            "O arquivo é salvo com nome UUID e já fica disponível em GET /images/<nome>. " +
+            "Depois, mande a url devolvida no imageUrl do POST /produtos ou do PUT /produtos/meus/{id}.",
+        security = [SecurityRequirement(name = SECURITY_SCHEME)],
+        responses = [
+            ApiResponse(
+                responseCode = "201", description = "Imagem salva; url = caminho relativo (/images/<uuid>.jpg)",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ImagemResponseDto::class))]
+            ),
+            ApiResponse(
+                responseCode = "401", description = "Token ausente ou inválido",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            ),
+            ApiResponse(
+                responseCode = "403", description = "Perfil diferente de PRODUCER",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            ),
+            ApiResponse(
+                responseCode = "415", description = "Corpo não é multipart/form-data",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            ),
+            ApiResponse(
+                responseCode = "422", description = "Arquivo ausente, vazio, acima de 2 MB ou de tipo não aceito (errors.arquivo)",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            )
+        ]
+    )
+    @PostMapping("/imagens", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun enviarImagem(
+        // required = false: arquivo ausente cai na mesma validação (422) do arquivo vazio
+        @RequestPart("arquivo", required = false) arquivo: MultipartFile?
+    ): ResponseEntity<ImagemResponseDto> =
+        ResponseEntity.status(HttpStatus.CREATED).body(ImagemResponseDto(imagemService.salvar(arquivo)))
 
     @Operation(
         summary = "Listar meus produtos",

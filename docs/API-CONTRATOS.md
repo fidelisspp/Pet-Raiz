@@ -2,13 +2,14 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 1 (produtor gerencia os próprios produtos).
+**Estado:** Etapa 2 (upload de foto do produto).
 
 ### Mudanças por etapa
 
 | Etapa | Rotas novas ou alteradas |
 |---|---|
 | 1 | **Novas:** `GET /produtores/me` (usuários); `GET /produtos/meus`, `GET/PUT/DELETE /produtos/meus/{id}` (produtos). **Alterada (compatível):** `POST /produtos` aceita `imageUrl` ausente → grava `/images/sem-foto.png` |
+| 2 | **Nova:** `POST /produtos/meus/imagens` (upload multipart). As fotos enviadas são servidas no mesmo `GET /images/**` |
 
 ## Convenções
 
@@ -130,11 +131,19 @@ Só os produtos do dono do token. Produto de outro produtor, removido ou inexist
 
 | Método e URL | Corpo | Sucesso | Erros |
 |---|---|---|---|
+| `POST /api/v1/produtos/meus/imagens` *(Etapa 2)* | multipart, campo `arquivo` | 201 `{ "url": "/images/<uuid>.jpg" }` | 401 · 403 · 415 · 422 |
 | `GET /api/v1/produtos/meus?page=&size=&sort=` | — | 200 página de `ProdutoMeuDto` | 401 · 403 |
 | `GET /api/v1/produtos/meus/{id}` | — | 200 `ProdutoMeuDto` | 401 · 403 · 404 |
 | `PUT /api/v1/produtos/meus/{id}` | `ProdutoCreateDto` | 200 `ProdutoMeuDto` | 401 · 403 · 404 (produto ou categoria) · 422 |
 | `DELETE /api/v1/produtos/meus/{id}` | — | 204 | 401 · 403 · 404 |
 
+- **Upload de foto** (fluxo no app: escolher a foto → `POST /imagens` → usar a `url` devolvida no `imageUrl` do POST/PUT do produto):
+  - `Content-Type: multipart/form-data`; o arquivo vai no campo **`arquivo`**.
+  - Aceita jpg, jpeg, png ou webp, **até 2 MB**. O tipo é conferido pelo conteúdo do arquivo (renomear um .txt para .jpg não passa).
+  - 201 → `{ "url": "/images/3f2a…e1.jpg" }`: nome UUID; a extensão sai do conteúdo (jpeg vira `.jpg`). Já pode ser exibida em `URL_PRODUTOS + url`.
+  - 422 → `errors.arquivo` com um destes motivos: `"envie uma imagem no campo arquivo"` (ausente ou vazio), `"deve ter no máximo 2 MB"`, `"deve ser uma imagem jpg, jpeg, png ou webp"`. `message` = `"Arquivo inválido"`.
+  - 415 → o corpo não é multipart (ex.: JSON).
+  - O upload sozinho não altera nenhum produto.
 - **Lista:** padrão `size=10`, `sort=createdAt,desc` (mais novos primeiro). Inclui estoque 0; não inclui removidos. Não depende do service-usuarios.
 - **PUT:** mesmo corpo do POST. `imageUrl` e `petType` **ausentes mantêm os valores atuais** (dá para editar só preço/estoque sem reenviar a foto). Os demais campos são obrigatórios. Pedidos já feitos não mudam.
 - **DELETE:** soft delete. O produto some do catálogo e da lista; nos carrinhos aparece com `available=false`. Remover de novo → 404.
@@ -150,7 +159,7 @@ Só os produtos do dono do token. Produto de outro produtor, removido ou inexist
 200 → `[ { id, name } ]` em ordem alfabética.
 
 ### `GET /images/**` — público
-Arquivos de imagem (produtos e fotos de produtores). `/images/sem-foto.png` é a imagem padrão de produto sem foto.
+Arquivos de imagem (produtos e fotos de produtores), incluindo as fotos enviadas por upload (disponíveis assim que o upload responde 201). `/images/sem-foto.png` é a imagem padrão de produto sem foto.
 
 ---
 

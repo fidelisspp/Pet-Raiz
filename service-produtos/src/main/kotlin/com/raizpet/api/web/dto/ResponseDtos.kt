@@ -65,3 +65,11 @@ data class ProdutoInternoDto(
     val active: Boolean,
     val producerId: Int
 )
+
+/**
+ * Resposta do upload (POST /produtos/meus/imagens). url é o caminho relativo que o app manda
+ * no imageUrl do POST /produtos ou do PUT /produtos/meus/{id}; para exibir, junta com a URL base deste serviço.
+ */
+data class ImagemResponseDto(
+    val url: String
+)
