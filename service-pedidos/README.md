@@ -25,7 +25,7 @@ do service-usuarios. Se o service-usuarios estiver numa versão sem essa rota, o
 abaixo exigem **CUSTOMER**; outro perfil recebe 403. Dado de outro cliente (endereço, pedido, item do
 carrinho) responde **404**, como se não existisse.
 
-## Endpoints (prefixo `/api/v1`, todos CUSTOMER)
+## Endpoints (prefixo `/api/v1`; CUSTOMER, exceto `/pedidos/recebidos/**`, que é PRODUCER)
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -42,6 +42,14 @@ carrinho) responde **404**, como se não existisse.
 | POST | `/pedidos/{id}/pagamento` | Pagamento simulado: `pending` → `paid` + `confirmedAt`. Se já não está pending → 409 |
 | GET | `/pedidos` | Histórico paginado (`page`, `size`), mais recente primeiro |
 | GET | `/pedidos/{id}` | Pedido completo (só o dono) |
+| GET | `/pedidos/recebidos` | **PRODUCER.** As partes (`order_producer_group`) do produtor do token, só de pedidos **pagos**, mais recentes primeiro. Filtro `status` opcional; `page`, `size` |
+| GET | `/pedidos/recebidos/{grupoId}` | **PRODUCER.** Uma parte; de outro produtor, não paga ou inexistente → 404 |
+| PATCH | `/pedidos/recebidos/{grupoId}/status` | **PRODUCER.** `{status}`: só o próximo da sequência `pending → preparing → shipped → delivered`; voltar/pular/repetir → 409. `SELECT ... FOR UPDATE` no grupo evita que dois cliques simultâneos avancem duas etapas |
+
+Formato do pedido recebido: `id (grupoId), orderId, createdAt, paidAt, status, nextStatus, shippingMethod,
+recipientName, address{...}, items[...], total` (`total` = só os itens do produtor, sem frete).
+As rotas de produtor ficam num controller separado (`PedidoRecebidoController`); `/pedidos/recebidos` é um caminho
+literal, então o Spring o escolhe antes de `/pedidos/{id}` (rota do cliente).
 
 Formato do pedido: `id, createdAt, address{...}, shippingMethod, shippingAmount, itemsAmount, totalAmount,
 payment{method, status, amount, createdAt, confirmedAt}, producers[{producerId, deliveryStatus, items[{productId,

@@ -79,3 +79,10 @@ data class PedidoCreateDto(
     @field:Pattern(regexp = "^(pix|card)$", message = "deve ser pix ou card")
     val paymentMethod: String? = null
 )
+
+/** PATCH /pedidos/recebidos/{grupoId}/status: o novo status (só o próximo da sequência é aceito). */
+data class StatusEntregaDto(
+    @field:NotBlank
+    @field:Pattern(regexp = "^(pending|preparing|shipped|delivered)$", message = "deve ser pending, preparing, shipped ou delivered")
+    val status: String? = null
+)

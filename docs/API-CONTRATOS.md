@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 2 (upload de foto do produto).
+**Estado:** Etapa 3 (pedidos recebidos pelo produtor).
 
 ### Mudanças por etapa
 
@@ -10,6 +10,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 |---|---|
 | 1 | **Novas:** `GET /produtores/me` (usuários); `GET /produtos/meus`, `GET/PUT/DELETE /produtos/meus/{id}` (produtos). **Alterada (compatível):** `POST /produtos` aceita `imageUrl` ausente → grava `/images/sem-foto.png` |
 | 2 | **Nova:** `POST /produtos/meus/imagens` (upload multipart). As fotos enviadas são servidas no mesmo `GET /images/**` |
+| 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 
 ## Convenções
 
@@ -163,7 +164,7 @@ Arquivos de imagem (produtos e fotos de produtores), incluindo as fotos enviadas
 
 ---
 
-## service-pedidos (8082) — todas as rotas exigem CUSTOMER
+## service-pedidos (8082) — CUSTOMER (exceto `/pedidos/recebidos`, que é PRODUCER)
 
 ### Endereços
 
@@ -216,7 +217,36 @@ Pedido:
                                 "quantity": 2, "unitPrice": 49.90, "subtotal": 99.80 } ],
                    "subtotal": 99.80 } ] }
 ```
-`deliveryStatus` (por produtor): `pending` → `preparing` → `shipped` → `delivered`.
+`deliveryStatus` (por produtor): `pending` → `preparing` → `shipped` → `delivered`. Quem avança é o produtor (`PATCH /pedidos/recebidos/{grupoId}/status`, abaixo); o cliente vê a mudança aqui, em `producers[].deliveryStatus`, sem nenhuma alteração neste contrato.
+
+### Pedidos recebidos — `/api/v1/pedidos/recebidos` — PRODUCER *(Etapa 3)*
+
+Cada "pedido recebido" é a **parte do produtor** num pedido (os itens dele). Só aparecem pedidos **pagos**. Parte de outro produtor, de pedido não pago ou inexistente → **404**.
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/pedidos/recebidos?status=&page=&size=` | — | 200 página de `PedidoRecebidoDto` | 400 `status` inválido · 401 · 403 |
+| `GET /api/v1/pedidos/recebidos/{grupoId}` | — | 200 `PedidoRecebidoDto` | 401 · 403 · 404 |
+| `PATCH /api/v1/pedidos/recebidos/{grupoId}/status` | `{ "status": "preparing" }` | 200 `PedidoRecebidoDto` atualizado | 401 · 403 · 404 · 409 · 422 |
+
+- **Lista:** mais recentes primeiro (data do pedido), `size` padrão 10. `status` opcional: `pending` | `preparing` | `shipped` | `delivered`.
+- **PATCH:** só avança **uma** etapa por vez (`pending → preparing → shipped → delivered`). Voltar, pular, repetir o atual ou mexer em pedido já entregue → **409**, com `message` explicando (ex.: `"Não é possível mudar o status de pending para shipped: o próximo status permitido é preparing"`). `status` ausente ou fora dos 4 valores → **422**.
+- **`nextStatus`** é o valor que o PATCH aceita agora (`null` quando `delivered`): o app pode usá-lo no botão "Avançar para…".
+
+`PedidoRecebidoDto`:
+```json
+{ "id": 5, "orderId": 4, "createdAt": "2026-11-20T10:24:53", "paidAt": "2026-11-20T10:24:55",
+  "status": "pending", "nextStatus": "preparing", "shippingMethod": "standard",
+  "recipientName": "Bia Souza",
+  "address": { "id": 3, "label": "Casa", "recipientName": "Bia Souza", "street": "Rua das Flores", "number": "100",
+               "complement": "Apto 12", "neighborhood": "Centro", "city": "Atibaia", "state": "SP", "zipCode": "12940-000" },
+  "items": [ { "productId": 1, "productName": "Ração Orgânica de Frango", "productImageUrl": "/images/frango.jpg",
+               "quantity": 2, "unitPrice": 89.90, "subtotal": 179.80 } ],
+  "total": 179.80 }
+```
+- `id` = `grupoId` das rotas; `orderId` = id do pedido do cliente.
+- `total` = só os itens deste produtor (o frete é do pedido inteiro e não entra).
+- `items[].productImageUrl` e `productName` são cópias do momento da compra.
 
 ---
 

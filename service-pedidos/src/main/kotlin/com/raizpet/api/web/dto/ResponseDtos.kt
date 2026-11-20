@@ -86,3 +86,24 @@ data class PedidoResponseDto(
     val payment: PagamentoResponseDto,
     val producers: List<PedidoProdutorResponseDto>
 )
+
+/**
+ * Pedido recebido pelo PRODUTOR: a parte dele (order_producer_group) num pedido pago.
+ * id = id do grupo (é o {grupoId} das rotas); orderId = id do pedido do cliente.
+ * total = soma só dos itens dele (o frete é do pedido inteiro e não entra aqui).
+ * nextStatus = status que o PATCH aceita agora (null quando já está delivered).
+ * address é o endereço atual da tabela address (o pedido guarda só o address_id).
+ */
+data class PedidoRecebidoResponseDto(
+    val id: Int,
+    val orderId: Int,
+    val createdAt: LocalDateTime,
+    val paidAt: LocalDateTime?,
+    val status: String,
+    val nextStatus: String?,
+    val shippingMethod: String,
+    val recipientName: String,
+    val address: EnderecoResponseDto,
+    val items: List<PedidoItemResponseDto>,
+    val total: BigDecimal
+)
