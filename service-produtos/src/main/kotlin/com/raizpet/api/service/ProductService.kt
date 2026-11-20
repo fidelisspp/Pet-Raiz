@@ -93,6 +93,43 @@ class ProductService(
         return ProdutoDoCatalogo(product, produtor)
     }
 
+    // ---- Admin (Etapa 5.4) ----
+
+    /**
+     * Produtos publicados (o mesmo recorte do catálogo) com a busca do admin, que também procura no
+     * nome do produtor: o nome vem da lista de aprovados do service-usuarios (uma chamada, como o catálogo).
+     */
+    fun buscarParaAdmin(busca: String?, categoriaId: Int?, pageable: Pageable): Page<ProdutoDoCatalogo> {
+        val aprovados = usuariosClient.buscarProdutoresAprovados()
+        if (aprovados.isEmpty()) return Page.empty(pageable)
+        val termo = busca?.trim()?.takeIf { it.isNotEmpty() }
+        val produtoresDaBusca = termo?.let { t ->
+            aprovados.filterValues { it.companyName.contains(t, ignoreCase = true) }.keys
+        }.orEmpty().ifEmpty { setOf(-1) }
+        return productRepository
+            .findParaAdmin(aprovados.keys, termo, produtoresDaBusca, categoriaId, pageable)
+            .map { ProdutoDoCatalogo(it, aprovados.getValue(it.producerId)) }
+    }
+
+    /** (produtos publicados, produtores com pelo menos um publicado) para o resumo do topo. */
+    fun resumoParaAdmin(): Pair<Long, Long> {
+        val aprovados = usuariosClient.buscarProdutoresAprovados()
+        if (aprovados.isEmpty()) return 0L to 0L
+        return productRepository.contarPublicados(aprovados.keys) to
+            productRepository.contarProdutoresComPublicados(aprovados.keys)
+    }
+
+    /**
+     * O admin tira o produto da loja: o mesmo soft delete do produtor (active = false).
+     * Pedidos antigos e carrinhos continuam apontando para o id; no carrinho ele vira available = false.
+     */
+    @Transactional
+    fun removerComoAdmin(id: Int) {
+        val product = productRepository.findByIdAndActiveTrue(id)
+            ?: throw EntityNotFoundException("Produto id=$id não encontrado")
+        product.active = false
+    }
+
     @Transactional(readOnly = true)
     fun buscarPorIds(ids: Collection<Int>): List<Product> =
         if (ids.isEmpty()) emptyList() else productRepository.findAllByIdIn(ids)

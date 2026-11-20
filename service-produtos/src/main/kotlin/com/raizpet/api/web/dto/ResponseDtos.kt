@@ -2,6 +2,12 @@ package com.raizpet.api.web.dto
 
 import java.math.BigDecimal
 
+/** Resumo do topo da tela Produtos do admin (Etapa 5.4): publicados e produtores com algo publicado. */
+data class ProdutosResumoDto(
+    val products: Long,
+    val producers: Long
+)
+
 /**
  * Categoria na visão do ADMIN (GET /categorias/resumo, Etapa 5.2).
  * productCount = produtos ativos (os que aparecem no app); removedProductCount = removidos pelo produtor

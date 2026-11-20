@@ -169,7 +169,8 @@ real versionada (use variável de ambiente com padrão de dev). Commit "Estado d
 - **5.3 Clientes**: *Feita.* usuários: `GET /clientes` com `busca` e `suspenso`, `PATCH /clientes/{id}/suspensao`;
   pedidos: `GET /pedidos/admin/clientes?ids=` (pedidos pagos e total gasto). O **app** junta as duas respostas
   (usuários não chama pedidos: seria um ciclo). Rotas de admin do service-pedidos ficam em `PedidoAdminController`.
-- **5.4 Produtos** (produtos): listar todos os produtos (de qualquer produtor, com produtor e categoria) e remover (soft delete), ADMIN.
+- **5.4 Produtos** (produtos): *Feita.* `GET /produtos/admin` (publicados = recorte do catálogo; busca no nome do
+  produto ou do produtor), `GET /produtos/admin/resumo`, `DELETE /produtos/admin/{id}` (soft delete), em `ProdutoAdminController`.
 - **5.5 Pedidos** (pedidos): listar todos os pedidos, cancelar (devolvendo o estoque pela rota interna de estorno)
   e corrigir o status de uma parte, ADMIN.
 - **5.6 Início do admin**: números reais (pedidos, entregas atrasadas, clientes, produtos publicados) a partir das rotas acima.

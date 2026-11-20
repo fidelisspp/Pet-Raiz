@@ -57,6 +57,9 @@ Token sem `id` inteiro ou com `role` fora de CUSTOMER/PRODUCER/ADMIN → 401.
 | GET | `/produtos` | público | Catálogo paginado. Filtros: `nome`, `categoriaId`, `produtorId`, `petType` (`dog` = dog+both, `cat` = cat+both, `both` = só both) |
 | GET | `/produtos/{id}` | público | Produto ativo de produtor aprovado; senão 404 |
 | GET | `/categorias` | público | Categorias em ordem alfabética |
+| GET | `/produtos/admin` | ADMIN | Produtos publicados com `busca` (produto ou produtor) e `categoriaId` (Etapa 5.4). Depende do service-usuarios |
+| GET | `/produtos/admin/resumo` | ADMIN | `{products, producers}` publicados (Etapa 5.4) |
+| DELETE | `/produtos/admin/{id}` | ADMIN | Soft delete de qualquer produto (Etapa 5.4) |
 | GET | `/categorias/resumo` | ADMIN | Categorias com `productCount` (ativos) e `removedProductCount` (Etapa 5.2) |
 | POST, PUT `/{id}`, DELETE `/{id}` | `/categorias` | ADMIN | Criar, renomear (nome único sem maiúscula/acento → 409) e excluir (só sem produtos, nem removidos → 409) |
 | POST | `/produtos` | PRODUCER | Cadastro; dono = claim `id`. `imageUrl` opcional = `/images/arquivo.(jpg\|jpeg\|png\|webp)`; sem ele grava `/images/sem-foto.png`. `petType` opcional (padrão `both`). Resposta traz `producerId` |

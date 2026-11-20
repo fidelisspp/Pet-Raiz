@@ -51,6 +51,43 @@ interface ProductRepository : JpaRepository<Product, Int> {
     @EntityGraph(attributePaths = ["category"])
     fun findByIdAndProducerIdAndActiveTrue(id: Int, producerId: Int): Product?
 
+    // ---- Produtos do admin (Etapa 5.4) ----
+
+    /**
+     * Mesmo recorte do catálogo (ativos de produtores aprovados), com a busca do admin:
+     * [busca] casa com o nome do produto OU o produtor está em [produtoresDaBusca]
+     * (os aprovados cujo nome casou com a busca, calculados no ProductService).
+     * [produtoresDaBusca] nunca vem vazio: sem produtor que case, o serviço manda [-1].
+     */
+    @EntityGraph(attributePaths = ["category"])
+    @Query(
+        """
+        SELECT p FROM Product p
+        WHERE p.active = true
+          AND p.producerId IN :aprovados
+          AND (:busca IS NULL
+               OR LOWER(p.name) LIKE LOWER(CONCAT('%', :busca, '%'))
+               OR p.producerId IN :produtoresDaBusca)
+          AND (:categoriaId IS NULL OR p.category.id = :categoriaId)
+        """
+    )
+    fun findParaAdmin(
+        aprovados: Collection<Int>,
+        busca: String?,
+        produtoresDaBusca: Collection<Int>,
+        categoriaId: Int?,
+        pageable: Pageable
+    ): Page<Product>
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true AND p.producerId IN :aprovados")
+    fun contarPublicados(aprovados: Collection<Int>): Long
+
+    @Query("SELECT COUNT(DISTINCT p.producerId) FROM Product p WHERE p.active = true AND p.producerId IN :aprovados")
+    fun contarProdutoresComPublicados(aprovados: Collection<Int>): Long
+
+    /** Remoção pelo admin: qualquer produto ativo, de qualquer produtor. */
+    fun findByIdAndActiveTrue(id: Int): Product?
+
     // ---- Categorias do admin (Etapa 5.2) ----
 
     /**

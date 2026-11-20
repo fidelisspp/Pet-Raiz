@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 5.3 (clientes do admin). Próximas: 5.4 a 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
+**Estado:** Etapa 5.4 (produtos do admin). Próximas: 5.5 e 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
 
 ### Mudanças por etapa
 
@@ -13,6 +13,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 | 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
 | 5 | **Alterada:** `PUT /enderecos/{id}` passa a responder **409** quando o endereço já foi usado em pedido (igual ao `DELETE`). Antes, alterava e o pedido antigo mostrava o endereço novo |
+| 5.4 | **Novas (ADMIN, produtos):** `GET /produtos/admin` (busca no nome do produto ou do produtor, `categoriaId`), `GET /produtos/admin/resumo`, `DELETE /produtos/admin/{id}` |
 | 5.3 | **Alterada (compatível, ADMIN, usuários):** `GET /clientes` aceita `busca` e `suspenso`. **Novas:** `PATCH /clientes/{id}/suspensao` (usuários), `GET /pedidos/admin/clientes?ids=` (pedidos) |
 | 5.2 | **Novas (ADMIN, produtos):** `GET /categorias/resumo` (com contagem de produtos), `POST /categorias`, `PUT /categorias/{id}`, `DELETE /categorias/{id}`. `GET /categorias` público **inalterado** |
 | 5.1 | **Novas (ADMIN, usuários):** `GET /produtores/pendentes`, `GET /produtores/cadastros?status=`, `PATCH /produtores/{id}/status`, `GET /produtores/{id}/documento`. **Alterada (compatível):** `POST /usuarios/produtores` também aceita **multipart** (`dados` + `documento`); o JSON continua igual. **Alterada:** o 403 do login de produtor rejeitado agora traz o motivo: `"Cadastro de produtor rejeitado. Motivo: …"` |
@@ -213,6 +214,22 @@ Só os produtos do dono do token. Produto de outro produtor, removido ou inexist
 
 ### `GET /api/v1/categorias` — público
 200 → `[ { id, name } ]` em ordem alfabética.
+
+### Produtos publicados — ADMIN *(Etapa 5.4)*
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/produtos/admin?busca=&categoriaId=&page=&size=` | — | 200 página de `ProdutoResponseDto` (o **mesmo formato do catálogo**), ordem por nome | 400 · 401 · 403 · 503 |
+| `GET /api/v1/produtos/admin/resumo` | — | 200 `{ "products": 10, "producers": 3 }` | 401 · 403 · 503 |
+| `DELETE /api/v1/produtos/admin/{id}` | — | 204 | 401 · 403 · 404 inexistente ou já removido |
+
+- **Publicado** = o mesmo recorte do catálogo: produto ativo de produtor **aprovado**. Por isso lista e resumo consultam o
+  service-usuarios (uma chamada) e, se ele estiver fora do ar, respondem **503**. O `DELETE` não depende dele.
+- `busca` procura no **nome do produto** e no **nome do produtor** (sem diferenciar maiúscula). `categoriaId` filtra.
+- `products` = produtos publicados; `producers` = produtores aprovados com pelo menos um publicado.
+- `DELETE` é o mesmo soft delete do produtor (`active=false`): some do catálogo e do `/meus` do dono; pedidos antigos e
+  carrinhos não mudam (no carrinho vira `available=false`). Funciona para produto de qualquer produtor.
+- O admin não edita produto: só o produtor, pela área dele.
 
 ### Gestão de categorias — ADMIN *(Etapa 5.2)*
 
