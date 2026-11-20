@@ -21,6 +21,10 @@ Swagger: http://localhost:8080/docs-petraiz.html
 Arquivos em `src/main/resources/static/images/`, servidos em `GET /images/<arquivo>` (público).
 O banco guarda só o caminho relativo (`/images/x.jpg`). Depois de colocar arquivos novos, reinicie
 o serviço (o `spring-boot:run` copia `src/main/resources` para `target/classes` ao subir).
+`sem-foto.png` é a imagem padrão de produto cadastrado sem foto (`IMAGEM_SEM_FOTO` em `ProdutoCreateDto.kt`).
+
+A regra de segurança de `/produtos/meus/**` (autenticado) vem **antes** do `permitAll` de `GET /produtos/*`:
+o Spring Security usa a primeira regra que casar, e `/produtos/*` também casa com `/produtos/meus`.
 
 ## Dependência do service-usuarios
 
@@ -42,7 +46,11 @@ Token sem `id` inteiro ou com `role` fora de CUSTOMER/PRODUCER/ADMIN → 401.
 | GET | `/produtos` | público | Catálogo paginado. Filtros: `nome`, `categoriaId`, `produtorId`, `petType` (`dog` = dog+both, `cat` = cat+both, `both` = só both) |
 | GET | `/produtos/{id}` | público | Produto ativo de produtor aprovado; senão 404 |
 | GET | `/categorias` | público | Categorias em ordem alfabética |
-| POST | `/produtos` | PRODUCER | Cadastro; dono = claim `id`. `imageUrl` = `/images/arquivo.(jpg\|jpeg\|png\|webp)`, `petType` opcional (padrão `both`). Resposta traz `producerId` |
+| POST | `/produtos` | PRODUCER | Cadastro; dono = claim `id`. `imageUrl` opcional = `/images/arquivo.(jpg\|jpeg\|png\|webp)`; sem ele grava `/images/sem-foto.png`. `petType` opcional (padrão `both`). Resposta traz `producerId` |
+| GET | `/produtos/meus` | PRODUCER | Produtos do dono do token, paginado (padrão `createdAt,desc`, 10). Inclui estoque 0, exclui removidos. Não chama o service-usuarios |
+| GET | `/produtos/meus/{id}` | PRODUCER | Um produto do dono; de outro produtor, removido ou inexistente → 404 |
+| PUT | `/produtos/meus/{id}` | PRODUCER | Mesmo corpo do POST. `imageUrl`/`petType` ausentes mantêm os atuais. 404 como acima; 422 |
+| DELETE | `/produtos/meus/{id}` | PRODUCER | Soft delete (`active=false`): some do catálogo e do `/meus`. 204; 404 como acima |
 | GET | `/interno/produtos?ids=1,2` | `X-Internal-Key` | Produtos existentes (ativos ou não), máx. 100 ids |
 | POST | `/interno/estoque/reserva` | `X-Internal-Key` | `{"itens":[{"productId":1,"quantity":2}]}`. Tudo ou nada: 409 (estoque/inativo) ou 404 (inexistente) sem baixar nada |
 | POST | `/interno/estoque/estorno` | `X-Internal-Key` | Mesma lista da reserva; devolve as quantidades. Sem idempotência (ver `../service-pedidos/README.md`) |

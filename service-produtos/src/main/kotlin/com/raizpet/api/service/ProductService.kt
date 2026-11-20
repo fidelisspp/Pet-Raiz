@@ -33,6 +33,36 @@ class ProductService(
         return productRepository.save(product)
     }
 
+    // ---- Área do produtor: tudo filtrado pelo id do token. Produto de outro produtor ou já
+    // removido dá 404 (e não 403), para não revelar que o id existe. ----
+
+    @Transactional(readOnly = true)
+    fun buscarMeus(producerId: Int, pageable: Pageable): Page<Product> =
+        productRepository.findAllByProducerIdAndActiveTrue(producerId, pageable)
+
+    @Transactional(readOnly = true)
+    fun buscarMeu(id: Int, producerId: Int): Product =
+        productRepository.findByIdAndProducerIdAndActiveTrue(id, producerId)
+            ?: throw EntityNotFoundException("Produto id=$id não encontrado")
+
+    /** [alterar] copia os dados novos para o produto (ProdutoMapper.atualizar); o save sai no commit. */
+    @Transactional
+    fun atualizarMeu(id: Int, producerId: Int, categoryId: Int, alterar: (Product) -> Unit): Product {
+        val product = buscarMeu(id, producerId)
+        alterar(product)
+        product.category = categoryService.buscarPorId(categoryId)
+        return product
+    }
+
+    /**
+     * Soft delete: active = false. O produto some do catálogo e do /meus, mas continua no banco
+     * (pedidos antigos e carrinhos ainda apontam para o id; no carrinho ele aparece como available = false).
+     */
+    @Transactional
+    fun removerMeu(id: Int, producerId: Int) {
+        buscarMeu(id, producerId).active = false
+    }
+
     /**
      * Catálogo: UMA chamada ao service-usuarios (aprovados), depois a consulta local com
      * producer_id IN (aprovados). Se o service-usuarios falhar, ServicoIndisponivelException (503).

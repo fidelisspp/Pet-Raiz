@@ -48,9 +48,11 @@ class SpringSecurityConfig {
                 auth
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/clientes", "/api/v1/usuarios/produtores").permitAll()
+                    // Perfil do produtor logado. PRECISA vir antes do permitAll abaixo: "/produtores/*" também
+                    // casa com "/produtores/me" e, como vale a primeira regra que casar, a rota ficaria pública.
+                    // Aqui só exige token; o perfil PRODUCER é conferido pelo @PreAuthorize (403 em ErrorMessage).
+                    .requestMatchers(HttpMethod.GET, "/api/v1/produtores/me").authenticated()
                     // Vitrine pública dos produtores (só aprovados; quem filtra é o ProducerService).
-                    // ATENÇÃO: "/produtores/*" também casa com "/produtores/me". Quando essa rota (PRODUCER)
-                    // for criada, a regra autenticada dela precisa vir ANTES desta linha.
                     .requestMatchers(HttpMethod.GET, "/api/v1/produtores", "/api/v1/produtores/*").permitAll()
                     // Só outros serviços, com X-Internal-Key (InternoKeyFilter dá o ROLE_SERVICE)
                     .requestMatchers("/api/v1/interno/**").hasRole(InternoKeyFilter.ROLE)

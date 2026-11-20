@@ -42,6 +42,7 @@ token com a mesma `petraiz.jwt.secret-key` e usam `id` e `role` das claims.
 | PATCH | `/usuarios/{id}` | o próprio | Troca de senha |
 | GET | `/usuarios` | ADMIN | Lista usuários |
 | GET | `/clientes`, `/clientes/{id}` | ADMIN | Clientes |
+| GET | `/produtores/me` | PRODUCER | Perfil do produtor logado `{id, companyName, shortDescription, imageUrl, city, state, status}`. A regra de segurança vem **antes** do `permitAll` de `/produtores/*` |
 | GET | `/produtores` | público | Produtores **aprovados**, paginado (`page`, `size`, `sort`; padrão `companyName`) |
 | GET | `/produtores/{id}` | público | Produtor aprovado; pendente, rejeitado ou inexistente → 404 |
 | GET | `/interno/produtores/aprovados` | header `X-Internal-Key` | Todos os aprovados `[{id, companyName, cnpj}]`, para o service-produtos |

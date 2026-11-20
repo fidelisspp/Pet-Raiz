@@ -1,7 +1,10 @@
 package com.raizpet.api.web.controller
 
+import com.raizpet.api.config.SpringDocOpenApiConfig.Companion.SECURITY_SCHEME
+import com.raizpet.api.jwt.JwtUserDetails
 import com.raizpet.api.service.ProducerService
 import com.raizpet.api.web.dto.PageableDto
+import com.raizpet.api.web.dto.ProdutorMeDto
 import com.raizpet.api.web.dto.ProdutorPublicoDto
 import com.raizpet.api.web.dto.mapper.PageableMapper
 import com.raizpet.api.web.dto.mapper.ProdutorMapper
@@ -12,10 +15,13 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -64,6 +70,32 @@ class ProdutorController(private val producerService: ProducerService) {
         val produtores = producerService.buscarAprovados(pageable).map(ProdutorMapper::toPublicoDto)
         return ResponseEntity.ok(PageableMapper.toDto(produtores))
     }
+
+    @Operation(
+        summary = "Meu perfil de produtor",
+        description = "Requisição exige um Bearer Token. Acesso restrito a PRODUCER. " +
+            "Dados do produtor do token, para a área do produtor no app. " +
+            "imageUrl é o caminho relativo (/images/x.jpg), servido pelo service-produtos.",
+        security = [SecurityRequirement(name = SECURITY_SCHEME)],
+        responses = [
+            ApiResponse(
+                responseCode = "200", description = "Perfil do produtor logado",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ProdutorMeDto::class))]
+            ),
+            ApiResponse(
+                responseCode = "401", description = "Token ausente ou inválido",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            ),
+            ApiResponse(
+                responseCode = "403", description = "Perfil diferente de PRODUCER",
+                content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]
+            )
+        ]
+    )
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('PRODUCER')")
+    fun getMe(@AuthenticationPrincipal userDetails: JwtUserDetails): ResponseEntity<ProdutorMeDto> =
+        ResponseEntity.ok(ProdutorMapper.toMeDto(producerService.buscarPorId(userDetails.id)))
 
     @Operation(
         summary = "Localizar um produtor aprovado", description = "Recurso público.",

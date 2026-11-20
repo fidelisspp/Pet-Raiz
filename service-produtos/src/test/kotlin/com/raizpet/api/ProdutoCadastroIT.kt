@@ -73,6 +73,15 @@ class ProdutoCadastroIT : IntegracaoBase() {
     }
 
     @Test
+    fun criarProduto_SemImageUrl_GravarImagemPadraoSemFoto() {
+        val responseBody = postProduto(produtoValido().copy(imageUrl = null))
+            .expectStatus().isCreated
+            .expectBody(ProdutoCriadoResponseDto::class.java)
+            .returnResult().responseBody
+        assertThat(responseBody!!.imageUrl).isEqualTo("/images/sem-foto.png")
+    }
+
+    @Test
     fun criarProduto_ComServicoDeUsuariosFora_ContinuaCriando() {
         UsuariosStub.modo = UsuariosStub.Modo.ERRO_500
         postProduto(produtoValido()).expectStatus().isCreated

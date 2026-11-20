@@ -123,7 +123,8 @@ class ProdutoController(private val productService: ProductService) {
         summary = "Cadastrar produto",
         description = "Requisição exige um Bearer Token emitido pelo service-usuarios. Acesso restrito a PRODUCER. " +
             "O produtor dono é o id do token (validado só pelas claims, sem consultar outro serviço). " +
-            "imageUrl é o caminho relativo /images/arquivo.jpg.",
+            "imageUrl (opcional) é o caminho relativo /images/arquivo.jpg; sem ele, o produto fica com " +
+            "/images/sem-foto.png. petType é opcional (padrão both).",
         security = [SecurityRequirement(name = SECURITY_SCHEME)],
         responses = [
             ApiResponse(

@@ -2,6 +2,7 @@ package com.raizpet.api
 
 import com.raizpet.api.web.dto.PageableDto
 import com.raizpet.api.web.dto.ProdutorAprovadoDto
+import com.raizpet.api.web.dto.ProdutorMeDto
 import com.raizpet.api.web.dto.ProdutorPublicoDto
 import com.raizpet.api.web.exception.ErrorMessage
 import org.assertj.core.api.Assertions.assertThat
@@ -157,5 +158,64 @@ class ProdutorIT {
                 .exchange(),
             401
         )
+    }
+
+    // ---------- GET /produtores/me (PRODUCER) ----------
+
+    @Test
+    fun buscarMeuPerfil_ComTokenDeProdutor_RetornarDadosDoTokenComStatus200() {
+        val responseBody = testClient.get().uri("/api/v1/produtores/me")
+            .headers(JwtAuthentication.getHeaderAuthorization(testClient, "carlos@email.com"))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(ProdutorMeDto::class.java)
+            .returnResult().responseBody
+
+        assertThat(responseBody).isEqualTo(
+            ProdutorMeDto(
+                id = 103,
+                companyName = "Sítio Raiz Orgânicos",
+                shortDescription = "Rações naturais de frango e peixe orgânicos",
+                imageUrl = "/images/produtor-sitio-raiz.jpg",
+                city = "Atibaia",
+                state = "SP",
+                status = "approved"
+            )
+        )
+    }
+
+    @Test
+    fun buscarMeuPerfil_ProdutorSemFotoECidade_RetornarCamposNulos() {
+        val responseBody = testClient.get().uri("/api/v1/produtores/me")
+            .headers(JwtAuthentication.getHeaderAuthorization(testClient, "davi@email.com"))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(ProdutorMeDto::class.java)
+            .returnResult().responseBody
+
+        assertThat(responseBody!!.id).isEqualTo(106)
+        assertThat(responseBody.imageUrl).isNull()
+        assertThat(responseBody.city).isNull()
+        assertThat(responseBody.state).isNull()
+    }
+
+    @Test
+    fun buscarMeuPerfil_ComClienteOuAdmin_RetornarErrorMessageStatus403() {
+        listOf("bia@email.com", "ana@email.com").forEach { email ->
+            esperarErro(
+                testClient.get().uri("/api/v1/produtores/me")
+                    .headers(JwtAuthentication.getHeaderAuthorization(testClient, email))
+                    .exchange(),
+                403
+            )
+        }
+    }
+
+    @Test
+    fun buscarMeuPerfil_SemToken_RetornarErrorMessageStatus401() {
+        // Prova que a regra de /produtores/me vem antes do permitAll de /produtores/*
+        esperarErro(testClient.get().uri("/api/v1/produtores/me").exchange(), 401)
+        // E a rota pública vizinha continua aberta
+        testClient.get().uri("/api/v1/produtores/103").exchange().expectStatus().isOk
     }
 }

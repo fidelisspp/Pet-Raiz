@@ -53,6 +53,21 @@ data class ProdutorPublicoDto(
 )
 
 /**
+ * Perfil do produtor logado (GET /api/v1/produtores/me), para a área do produtor no app.
+ * id = id do usuário (o mesmo do token e do producer_id dos produtos).
+ * status: pending, approved ou rejected (na prática approved, porque só aprovado consegue logar).
+ */
+data class ProdutorMeDto(
+    val id: Int,
+    val companyName: String,
+    val shortDescription: String,
+    val imageUrl: String?,
+    val city: String?,
+    val state: String?,
+    val status: String
+)
+
+/**
  * Item da lista interna GET /api/v1/interno/produtores/aprovados, consumida pelo service-produtos.
  * Tem o mínimo que o catálogo precisa: o id (para filtrar producer_id IN ...) e o que aparece no card.
  */

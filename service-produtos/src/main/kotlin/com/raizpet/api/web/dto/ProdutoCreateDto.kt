@@ -12,7 +12,15 @@ import java.math.BigDecimal
 // Caminho relativo de imagem servida por este serviço: /images/<arquivo>.<jpg|jpeg|png|webp>
 const val IMAGE_PATH_REGEX = "^/images/[A-Za-z0-9._-]+\\.(jpg|jpeg|png|webp)$"
 
-// Não tem producerId: o produtor dono é sempre o id do token
+// Imagem gravada quando o produtor cadastra sem foto (arquivo em static/images/). Assim imageUrl nunca é null
+// nas respostas, e o app e o service-pedidos não precisam tratar produto sem imagem.
+const val IMAGEM_SEM_FOTO = "/images/sem-foto.png"
+
+/**
+ * Corpo do POST /produtos e do PUT /produtos/meus/{id}. Não tem producerId: o dono é sempre o id do token.
+ * imageUrl e petType são opcionais: no POST, ausentes viram IMAGEM_SEM_FOTO e both;
+ * no PUT, ausentes mantêm o valor atual do produto.
+ */
 data class ProdutoCreateDto(
     @field:NotBlank
     @field:Size(max = 150)
@@ -29,9 +37,8 @@ data class ProdutoCreateDto(
     @field:PositiveOrZero
     val stock: Int? = null,
 
-    // Mudou em relação ao pet-raiz: o banco guarda só o caminho relativo, então não é mais URL completa.
-    // Upload de imagem continua fora desta entrega: o arquivo precisa ser colocado em static/images/.
-    @field:NotBlank
+    // Opcional. O banco guarda só o caminho relativo, não a URL completa.
+    // Se vier, precisa ser um caminho válido (string vazia também é 422).
     @field:Pattern(regexp = IMAGE_PATH_REGEX, message = "deve ser um caminho no formato /images/arquivo.jpg")
     @field:Size(max = 500)
     val imageUrl: String? = null,
@@ -39,7 +46,7 @@ data class ProdutoCreateDto(
     @field:NotNull
     val categoryId: Int? = null,
 
-    // Opcional (padrão both, como no banco)
+    // Opcional (no POST, padrão both, como no banco)
     @field:Pattern(regexp = "^(dog|cat|both)$", message = "deve ser dog, cat ou both")
     val petType: String? = null
 )

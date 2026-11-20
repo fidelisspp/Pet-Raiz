@@ -5,6 +5,7 @@ import com.raizpet.api.entity.ProducerStatus
 import com.raizpet.api.util.DocumentoUtils
 import com.raizpet.api.web.dto.ProdutorAprovadoDto
 import com.raizpet.api.web.dto.ProdutorCreateDto
+import com.raizpet.api.web.dto.ProdutorMeDto
 import com.raizpet.api.web.dto.ProdutorPublicoDto
 import com.raizpet.api.web.dto.ProdutorResponseDto
 
@@ -45,6 +46,17 @@ object ProdutorMapper {
         state = producer.state,
         since = producer.producerCreatedAt,
         verified = producer.status == ProducerStatus.approved
+    )
+
+    // Visão do próprio produtor (GET /produtores/me)
+    fun toMeDto(producer: Producer) = ProdutorMeDto(
+        id = requireNotNull(producer.id),
+        companyName = producer.companyName,
+        shortDescription = producer.shortDescription,
+        imageUrl = producer.imageUrl,
+        city = producer.city,
+        state = producer.state,
+        status = producer.status.name
     )
 
     // Visão interna (service-produtos): só o necessário para o catálogo

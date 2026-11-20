@@ -19,6 +19,14 @@ class ImagensIT : IntegracaoBase() {
     }
 
     @Test
+    fun buscarImagemPadraoSemFoto_SemToken_RetornarArquivoComStatus200() {
+        testClient.get().uri("/images/sem-foto.png")
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.IMAGE_PNG)
+    }
+
+    @Test
     fun buscarImagem_Inexistente_RetornarErrorMessageStatus404() {
         esperarErro(testClient.get().uri("/images/nao-existe.jpg").exchange(), 404)
     }

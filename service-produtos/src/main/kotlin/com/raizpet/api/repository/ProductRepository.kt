@@ -42,6 +42,15 @@ interface ProductRepository : JpaRepository<Product, Int> {
     @Query("SELECT p FROM Product p WHERE p.id = :id AND p.active = true")
     fun findActiveById(id: Int): Product?
 
+    // ---- Área do produtor (/produtos/meus): só os produtos do dono do token, sem os removidos ----
+    // Não filtra estoque nem aprovação: o produtor vê tudo o que é dele, inclusive estoque 0.
+
+    @EntityGraph(attributePaths = ["category"])
+    fun findAllByProducerIdAndActiveTrue(producerId: Int, pageable: Pageable): Page<Product>
+
+    @EntityGraph(attributePaths = ["category"])
+    fun findByIdAndProducerIdAndActiveTrue(id: Int, producerId: Int): Product?
+
     /** Rota interna de consulta: devolve o que existir (ativo ou não), sem olhar o produtor. */
     @EntityGraph(attributePaths = ["category"])
     @Query("SELECT p FROM Product p WHERE p.id IN :ids ORDER BY p.id")

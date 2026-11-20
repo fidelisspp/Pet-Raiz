@@ -3,6 +3,7 @@ package com.raizpet.api.web.dto.mapper
 import com.raizpet.api.client.ProdutorAprovado
 import com.raizpet.api.entity.PetType
 import com.raizpet.api.entity.Product
+import com.raizpet.api.web.dto.IMAGEM_SEM_FOTO
 import com.raizpet.api.web.dto.ProdutoCreateDto
 import com.raizpet.api.web.dto.ProdutoCriadoResponseDto
 import com.raizpet.api.web.dto.ProdutoInternoDto
@@ -17,8 +18,22 @@ object ProdutoMapper {
         description = dto.description?.takeIf { it.isNotBlank() }
         price = dto.price!!
         stock = dto.stock!!
-        imageUrl = dto.imageUrl!!.trim()
+        imageUrl = dto.imageUrl ?: IMAGEM_SEM_FOTO
         petType = PetType.deTexto(dto.petType) ?: PetType.both
+    }
+
+    /**
+     * PUT /produtos/meus/{id}: copia o corpo para o produto que já existe.
+     * imageUrl e petType ausentes mantêm o valor atual (o app pode editar só preço/estoque sem reenviar a foto).
+     * category é resolvida pelo ProductService.
+     */
+    fun atualizar(product: Product, dto: ProdutoCreateDto) = product.apply {
+        name = dto.name!!.trim()
+        description = dto.description?.takeIf { it.isNotBlank() }
+        price = dto.price!!
+        stock = dto.stock!!
+        dto.imageUrl?.let { imageUrl = it }
+        PetType.deTexto(dto.petType)?.let { petType = it }
     }
 
     /** [produtor] vem da rota interna do service-usuarios (só aprovados). */

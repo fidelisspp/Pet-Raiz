@@ -2,7 +2,13 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 0 (rotas existentes na apresentação de 11/11).
+**Estado:** Etapa 1 (produtor gerencia os próprios produtos).
+
+### Mudanças por etapa
+
+| Etapa | Rotas novas ou alteradas |
+|---|---|
+| 1 | **Novas:** `GET /produtores/me` (usuários); `GET /produtos/meus`, `GET/PUT/DELETE /produtos/meus/{id}` (produtos). **Alterada (compatível):** `POST /produtos` aceita `imageUrl` ausente → grava `/images/sem-foto.png` |
 
 ## Convenções
 
@@ -11,7 +17,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | URLs base (dev) | usuários `http://<host>:8081`, produtos `http://<host>:8080`, pedidos `http://<host>:8082` |
 | Autenticação | header `Authorization: Bearer <token>`; token obtido em `POST /api/v1/auth` (service-usuarios), vale 8 h e é aceito pelos 3 serviços |
 | Perfis (`role`) | `CUSTOMER`, `PRODUCER`, `ADMIN` |
-| Imagens | `imageUrl` é sempre caminho relativo (`/images/x.jpg`); o app monta `URL_PRODUTOS + imageUrl` |
+| Imagens | `imageUrl` é sempre caminho relativo (`/images/x.jpg`); o app monta `URL_PRODUTOS + imageUrl`. Em produto nunca vem `null` (sem foto = `/images/sem-foto.png`); em produtor pode vir `null` |
 | Datas | `LocalDateTime` ISO-8601, ex.: `2026-11-11T14:30:00` (fuso America/Sao_Paulo) |
 | Dinheiro | número decimal, ex.: `49.90` |
 | Swagger | `/docs-petraiz.html` em cada serviço |
@@ -73,6 +79,16 @@ Corpo: `{ currentPassword, newPassword, confirmPassword }` (6..100)
 Paginado (`size` padrão 10, `sort` padrão `companyName,asc`). Só aprovados.
 200 → página de `{ id, companyName, shortDescription, cnpj, imageUrl?, city?, state?, since, verified }`
 
+### `GET /api/v1/produtores/me` — PRODUCER *(Etapa 1)*
+Perfil do produtor logado (área do produtor no app). `id` é o mesmo do token e do `producerId` dos produtos.
+200 →
+```json
+{ "id": 2, "companyName": "Sítio Raiz Orgânicos", "shortDescription": "Rações naturais orgânicas",
+  "imageUrl": "/images/produtor-sitio-raiz-organicos.jpg", "city": null, "state": null, "status": "approved" }
+```
+`imageUrl`, `city` e `state` podem vir `null`. `status`: `pending` | `approved` | `rejected` (na prática `approved`, porque só aprovado faz login).
+Erros: 401 sem token · 403 perfil diferente de PRODUCER.
+
 ### `GET /api/v1/produtores/{id}` — público
 200 → `{ id, companyName, shortDescription, cnpj, imageUrl?, city?, state?, since, verified }`
 Erro: 404 inexistente, pendente ou rejeitado.
@@ -100,16 +116,41 @@ Erros: 400 `petType` inválido · 503 service-usuarios fora do ar.
 200 → `ProdutoResponseDto`. Erros: 404 inexistente, inativo ou de produtor não aprovado · 503.
 
 ### `POST /api/v1/produtos` — PRODUCER
-Corpo: `{ name: ≤150, description?, price: >0, stock: ≥0, imageUrl: "/images/arquivo.(jpg|jpeg|png|webp)", categoryId, petType?: dog|cat|both (padrão both) }`
+Corpo (`ProdutoCreateDto`): `{ name: ≤150, description?, price: >0 (2 casas), stock: ≥0, imageUrl?: "/images/arquivo.(jpg|jpeg|png|webp)", categoryId, petType?: dog|cat|both }`
+- `imageUrl` ausente → grava `/images/sem-foto.png`. String vazia ou caminho inválido → 422.
+- `petType` ausente → `both`.
+
 O dono é o id do token.
-201 → `{ id, name, description, price, stock, imageUrl, petType, active, category: {id, name}, producerId }`
+201 → `ProdutoMeuDto` (abaixo).
 Erros: 401 · 403 · 404 categoria · 422.
+
+### Área do produtor — `/api/v1/produtos/meus` — PRODUCER *(Etapa 1)*
+
+Só os produtos do dono do token. Produto de outro produtor, removido ou inexistente → **404** (nunca 403).
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/produtos/meus?page=&size=&sort=` | — | 200 página de `ProdutoMeuDto` | 401 · 403 |
+| `GET /api/v1/produtos/meus/{id}` | — | 200 `ProdutoMeuDto` | 401 · 403 · 404 |
+| `PUT /api/v1/produtos/meus/{id}` | `ProdutoCreateDto` | 200 `ProdutoMeuDto` | 401 · 403 · 404 (produto ou categoria) · 422 |
+| `DELETE /api/v1/produtos/meus/{id}` | — | 204 | 401 · 403 · 404 |
+
+- **Lista:** padrão `size=10`, `sort=createdAt,desc` (mais novos primeiro). Inclui estoque 0; não inclui removidos. Não depende do service-usuarios.
+- **PUT:** mesmo corpo do POST. `imageUrl` e `petType` **ausentes mantêm os valores atuais** (dá para editar só preço/estoque sem reenviar a foto). Os demais campos são obrigatórios. Pedidos já feitos não mudam.
+- **DELETE:** soft delete. O produto some do catálogo e da lista; nos carrinhos aparece com `available=false`. Remover de novo → 404.
+
+`ProdutoMeuDto` (no Swagger aparece como `ProdutoCriadoResponseDto`; também é a resposta do POST):
+```json
+{ "id": 11, "name": "...", "description": null, "price": 12.50, "stock": 3,
+  "imageUrl": "/images/sem-foto.png", "petType": "dog", "active": true,
+  "category": { "id": 1, "name": "Ração Natural" }, "producerId": 2 }
+```
 
 ### `GET /api/v1/categorias` — público
 200 → `[ { id, name } ]` em ordem alfabética.
 
 ### `GET /images/**` — público
-Arquivos de imagem (produtos e fotos de produtores).
+Arquivos de imagem (produtos e fotos de produtores). `/images/sem-foto.png` é a imagem padrão de produto sem foto.
 
 ---
 

@@ -42,6 +42,10 @@ class SpringSecurityConfig {
             .httpBasic { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
+                    // Área do produtor. PRECISA vir antes do permitAll do catálogo: "/api/v1/produtos/*" também
+                    // casa com "/api/v1/produtos/meus" e, como vale a primeira regra que casar, a lista ficaria pública.
+                    // Aqui só exige token; o perfil PRODUCER é conferido pelo @PreAuthorize (403 em ErrorMessage).
+                    .requestMatchers("/api/v1/produtos/meus", "/api/v1/produtos/meus/**").authenticated()
                     // Catálogo e categorias: públicos (quem filtra os produtores aprovados é o ProductService)
                     .requestMatchers(HttpMethod.GET, "/api/v1/produtos", "/api/v1/produtos/*", "/api/v1/categorias").permitAll()
                     // Imagens de produtos e produtores (src/main/resources/static/images)
