@@ -1,0 +1,58 @@
+package com.raizpet.api.repository
+
+import com.raizpet.api.entity.PetType
+import com.raizpet.api.entity.Product
+import jakarta.persistence.LockModeType
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.EntityGraph
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Query
+
+interface ProductRepository : JpaRepository<Product, Int> {
+
+    /**
+     * Catálogo público. [aprovados] são os ids de produtor aprovados que vieram do service-usuarios
+     * (nunca vazia: o ProductService já devolve página vazia antes de chegar aqui).
+     * petType: dog traz dog + both, cat traz cat + both, both traz só both.
+     */
+    @EntityGraph(attributePaths = ["category"])
+    @Query(
+        """
+        SELECT p FROM Product p
+        WHERE p.active = true
+          AND p.producerId IN :aprovados
+          AND (:nome IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :nome, '%')))
+          AND (:categoriaId IS NULL OR p.category.id = :categoriaId)
+          AND (:produtorId IS NULL OR p.producerId = :produtorId)
+          AND (:petType IS NULL OR p.petType = :petType OR p.petType = com.raizpet.api.entity.PetType.both)
+        """
+    )
+    fun findCatalog(
+        aprovados: Collection<Int>,
+        nome: String?,
+        categoriaId: Int?,
+        produtorId: Int?,
+        petType: PetType?,
+        pageable: Pageable
+    ): Page<Product>
+
+    @EntityGraph(attributePaths = ["category"])
+    @Query("SELECT p FROM Product p WHERE p.id = :id AND p.active = true")
+    fun findActiveById(id: Int): Product?
+
+    /** Rota interna de consulta: devolve o que existir (ativo ou não), sem olhar o produtor. */
+    @EntityGraph(attributePaths = ["category"])
+    @Query("SELECT p FROM Product p WHERE p.id IN :ids ORDER BY p.id")
+    fun findAllByIdIn(ids: Collection<Int>): List<Product>
+
+    /**
+     * Reserva e estorno: SELECT ... FOR UPDATE nas linhas dos produtos, em ordem de id
+     * (duas reservas simultâneas travam as linhas na mesma ordem, o que evita deadlock).
+     * A trava dura até o fim da transação do EstoqueService.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id IN :ids ORDER BY p.id")
+    fun findAllByIdInForUpdate(ids: Collection<Int>): List<Product>
+}

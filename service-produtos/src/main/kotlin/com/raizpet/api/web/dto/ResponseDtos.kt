@@ -1,0 +1,67 @@
+package com.raizpet.api.web.dto
+
+import java.math.BigDecimal
+
+data class CategoriaResponseDto(
+    val id: Int,
+    val name: String
+)
+
+/**
+ * Dados públicos do produtor no catálogo. Mesmo formato do pet-raiz, mas montado com o que vem
+ * da rota interna do service-usuarios (id, companyName, cnpj). verified = sempre true, porque o
+ * catálogo só mostra produtor aprovado.
+ */
+data class ProdutorResumoDto(
+    val id: Int,
+    val companyName: String,
+    val cnpj: String,
+    val verified: Boolean
+)
+
+/**
+ * Item do catálogo (GET /produtos e /produtos/{id}). Igual ao pet-raiz + petType.
+ * imageUrl é o caminho relativo ("/images/x.jpg"): o app junta com a URL base deste serviço.
+ */
+data class ProdutoResponseDto(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val price: BigDecimal,
+    val stock: Int,
+    val imageUrl: String,
+    val petType: String,
+    val category: CategoriaResponseDto,
+    val producer: ProdutorResumoDto
+)
+
+/**
+ * Resposta do POST /produtos. Traz producerId em vez do objeto producer: o cadastro valida só o token
+ * (claims id e role) e não consulta o service-usuarios, então não tem companyName/cnpj para devolver.
+ */
+data class ProdutoCriadoResponseDto(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val price: BigDecimal,
+    val stock: Int,
+    val imageUrl: String,
+    val petType: String,
+    val active: Boolean,
+    val category: CategoriaResponseDto,
+    val producerId: Int
+)
+
+/**
+ * Produto nas rotas internas (consulta por ids, reserva e estorno), para o service-pedidos.
+ * Sem dados do produtor além do id: quem precisa conferir o produtor chama o service-usuarios.
+ */
+data class ProdutoInternoDto(
+    val id: Int,
+    val name: String,
+    val price: BigDecimal,
+    val stock: Int,
+    val imageUrl: String,
+    val active: Boolean,
+    val producerId: Int
+)

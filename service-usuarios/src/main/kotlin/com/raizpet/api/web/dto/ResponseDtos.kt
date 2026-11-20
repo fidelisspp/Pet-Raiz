@@ -1,0 +1,72 @@
+package com.raizpet.api.web.dto
+
+import java.time.LocalDateTime
+
+// Nenhum DTO de resposta expõe passwordHash
+
+data class UsuarioResponseDto(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val phone: String?,
+    val role: String,
+    val createdAt: LocalDateTime
+)
+
+data class ClienteResponseDto(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val phone: String?,
+    val cpf: String,
+    val suspended: Boolean
+)
+
+data class ProdutorResponseDto(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val phone: String?,
+    val cnpj: String,
+    val companyName: String,
+    val technicalResponsibleName: String,
+    val shortDescription: String,
+    val status: String
+)
+
+/**
+ * Página pública do produtor (GET /api/v1/produtores e /produtores/{id}).
+ * Só dados do negócio: nada de e-mail, telefone, responsável técnico ou documentos.
+ * imageUrl é o caminho relativo ("/images/x.jpg"); o app junta com a URL base do service-produtos.
+ * since = data em que virou produtor (o "Desde" da tela de detalhe).
+ */
+data class ProdutorPublicoDto(
+    val id: Int,
+    val companyName: String,
+    val shortDescription: String,
+    val cnpj: String,
+    val imageUrl: String?,
+    val city: String?,
+    val state: String?,
+    val since: LocalDateTime,
+    val verified: Boolean
+)
+
+/**
+ * Item da lista interna GET /api/v1/interno/produtores/aprovados, consumida pelo service-produtos.
+ * Tem o mínimo que o catálogo precisa: o id (para filtrar producer_id IN ...) e o que aparece no card.
+ */
+data class ProdutorAprovadoDto(
+    val id: Int,
+    val companyName: String,
+    val cnpj: String
+)
+
+/**
+ * Resposta de GET /api/v1/interno/clientes/{id}, consumida pelo service-pedidos no checkout.
+ * Só o necessário para decidir se o cliente pode comprar.
+ */
+data class ClienteInternoDto(
+    val id: Int,
+    val suspended: Boolean
+)

@@ -1,0 +1,16 @@
+# Build do Maven
+target/
+HELP.md
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Uploads feitos com o servidor rodando (Etapa 2)
+uploads/
+
+# VS Code / rascunhos locais
+.vscode/
+Claude outputs/
