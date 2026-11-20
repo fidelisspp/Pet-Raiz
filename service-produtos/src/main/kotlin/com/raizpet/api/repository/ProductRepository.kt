@@ -51,6 +51,25 @@ interface ProductRepository : JpaRepository<Product, Int> {
     @EntityGraph(attributePaths = ["category"])
     fun findByIdAndProducerIdAndActiveTrue(id: Int, producerId: Int): Product?
 
+    // ---- Categorias do admin (Etapa 5.2) ----
+
+    /**
+     * Por categoria: [0] id da categoria, [1] produtos ativos, [2] produtos removidos (soft delete).
+     * Categoria sem nenhum produto não aparece (o CategoryService completa com zero).
+     */
+    @Query(
+        """
+        SELECT p.category.id,
+               SUM(CASE WHEN p.active = true THEN 1 ELSE 0 END),
+               SUM(CASE WHEN p.active = false THEN 1 ELSE 0 END)
+        FROM Product p GROUP BY p.category.id
+        """
+    )
+    fun contarPorCategoria(): List<Array<Any>>
+
+    /** Ativos e removidos: a FK product.category_id impede excluir a categoria se houver qualquer um. */
+    fun countByCategoryIdAndActive(categoryId: Int, active: Boolean): Long
+
     /** Rota interna de consulta: devolve o que existir (ativo ou não), sem olhar o produtor. */
     @EntityGraph(attributePaths = ["category"])
     @Query("SELECT p FROM Product p WHERE p.id IN :ids ORDER BY p.id")

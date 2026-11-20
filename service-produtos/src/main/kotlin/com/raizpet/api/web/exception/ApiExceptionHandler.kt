@@ -1,5 +1,7 @@
 package com.raizpet.api.web.exception
 
+import org.springframework.dao.DataIntegrityViolationException
+import com.raizpet.api.exception.ConflitoException
 import com.raizpet.api.exception.ArquivoInvalidoException
 import com.raizpet.api.exception.EntityNotFoundException
 import com.raizpet.api.exception.EstoqueInsuficienteException
@@ -109,6 +111,26 @@ class ApiExceptionHandler {
     ): ResponseEntity<ErrorMessage> {
         log.warn("Api Error - 503 {}", ex.message)
         return body(request, HttpStatus.SERVICE_UNAVAILABLE, ex.message)
+    }
+
+    // Regra que impede a operação (Etapa 5.2: categoria repetida ou com produtos)
+    @ExceptionHandler(ConflitoException::class)
+    fun conflitoException(
+        ex: ConflitoException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.info("Conflito: {}", ex.message)
+        return body(request, HttpStatus.CONFLICT, ex.message)
+    }
+
+    // UNIQUE do banco (ex.: duas categorias criadas ao mesmo tempo com o mesmo nome)
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    fun dataIntegrityViolationException(
+        ex: DataIntegrityViolationException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorMessage> {
+        log.warn("Violação de integridade: {}", ex.mostSpecificCause.message)
+        return body(request, HttpStatus.CONFLICT, "A operação conflita com dados já existentes")
     }
 
     @ExceptionHandler(ParametroInvalidoException::class)

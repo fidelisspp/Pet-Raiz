@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 5.1 (aprovação de produtor). Próximas: 5.2 a 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
+**Estado:** Etapa 5.2 (categorias do admin). Próximas: 5.3 a 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
 
 ### Mudanças por etapa
 
@@ -13,6 +13,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 | 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
 | 5 | **Alterada:** `PUT /enderecos/{id}` passa a responder **409** quando o endereço já foi usado em pedido (igual ao `DELETE`). Antes, alterava e o pedido antigo mostrava o endereço novo |
+| 5.2 | **Novas (ADMIN, produtos):** `GET /categorias/resumo` (com contagem de produtos), `POST /categorias`, `PUT /categorias/{id}`, `DELETE /categorias/{id}`. `GET /categorias` público **inalterado** |
 | 5.1 | **Novas (ADMIN, usuários):** `GET /produtores/pendentes`, `GET /produtores/cadastros?status=`, `PATCH /produtores/{id}/status`, `GET /produtores/{id}/documento`. **Alterada (compatível):** `POST /usuarios/produtores` também aceita **multipart** (`dados` + `documento`); o JSON continua igual. **Alterada:** o 403 do login de produtor rejeitado agora traz o motivo: `"Cadastro de produtor rejeitado. Motivo: …"` |
 
 ## Convenções
@@ -202,6 +203,25 @@ Só os produtos do dono do token. Produto de outro produtor, removido ou inexist
 
 ### `GET /api/v1/categorias` — público
 200 → `[ { id, name } ]` em ordem alfabética.
+
+### Gestão de categorias — ADMIN *(Etapa 5.2)*
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/categorias/resumo` | — | 200 `[ { id, name, productCount, removedProductCount } ]` em ordem alfabética | 401 · 403 |
+| `POST /api/v1/categorias` | `{ "name": "Suplementos" }` | 201 `{ id, name }` | 401 · 403 · 409 nome repetido · 422 |
+| `PUT /api/v1/categorias/{id}` | `{ "name": "Novo nome" }` | 200 `{ id, name }` | 401 · 403 · 404 · 409 nome de outra categoria · 422 |
+| `DELETE /api/v1/categorias/{id}` | — | 204 | 401 · 403 · 404 · 409 tem produtos |
+
+- `name`: obrigatório, até 100 caracteres, gravado sem espaços nas pontas (422 → `errors.name`).
+- **Nome único sem diferenciar maiúsculas nem acentos** ("Ração Natural" = "RACAO natural"). 409 → `message` `"Já existe uma categoria com esse nome"`.
+  Renomear para o próprio nome (mesmo com outra caixa) é aceito.
+- `productCount` = produtos **ativos** (os que aparecem no app); `removedProductCount` = removidos pelo produtor (soft delete).
+- **Excluir só categoria sem nenhum produto**, nem removido (a linha do produto continua apontando para a categoria e
+  aparece nos pedidos antigos). 409 com `message` explicando o caso:
+  - com produtos à venda: `"A categoria \"X\" tem N produto(s) à venda. Ela só pode ser excluída depois que os produtores trocarem esses produtos de categoria."`
+  - só com removidos: `"A categoria \"X\" não tem produtos à venda, mas ainda guarda N produto(s) removido(s) pelos produtores, ... se quiser, renomeie a categoria."`
+- Renomear não mexe nos produtos (eles guardam o id): o nome novo aparece no catálogo na hora.
 
 ### `GET /images/**` — público
 Arquivos de imagem (produtos e fotos de produtores), incluindo as fotos enviadas por upload (disponíveis assim que o upload responde 201). `/images/sem-foto.png` é a imagem padrão de produto sem foto.

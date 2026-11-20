@@ -46,7 +46,9 @@ class SpringSecurityConfig {
                     // casa com "/api/v1/produtos/meus" e, como vale a primeira regra que casar, a lista ficaria pública.
                     // Aqui só exige token; o perfil PRODUCER é conferido pelo @PreAuthorize (403 em ErrorMessage).
                     .requestMatchers("/api/v1/produtos/meus", "/api/v1/produtos/meus/**").authenticated()
-                    // Catálogo e categorias: públicos (quem filtra os produtores aprovados é o ProductService)
+                    // Catálogo e categorias: públicos (quem filtra os produtores aprovados é o ProductService).
+                    // Só o GET /categorias exato: /categorias/resumo e POST/PUT/DELETE (ADMIN, Etapa 5.2) caem no
+                    // anyRequest().authenticated() e o perfil é conferido pelo @PreAuthorize.
                     .requestMatchers(HttpMethod.GET, "/api/v1/produtos", "/api/v1/produtos/*", "/api/v1/categorias").permitAll()
                     // Imagens de produtos e produtores (src/main/resources/static/images)
                     .requestMatchers(HttpMethod.GET, "/images/**").permitAll()

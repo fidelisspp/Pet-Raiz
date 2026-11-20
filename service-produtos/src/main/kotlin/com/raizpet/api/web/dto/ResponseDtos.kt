@@ -2,6 +2,18 @@ package com.raizpet.api.web.dto
 
 import java.math.BigDecimal
 
+/**
+ * Categoria na visão do ADMIN (GET /categorias/resumo, Etapa 5.2).
+ * productCount = produtos ativos (os que aparecem no app); removedProductCount = removidos pelo produtor
+ * (soft delete), que ainda apontam para a categoria e também impedem a exclusão.
+ */
+data class CategoriaResumoDto(
+    val id: Int,
+    val name: String,
+    val productCount: Long,
+    val removedProductCount: Long
+)
+
 data class CategoriaResponseDto(
     val id: Int,
     val name: String

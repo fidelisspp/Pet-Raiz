@@ -164,7 +164,8 @@ real versionada (use variável de ambiente com padrão de dev). Commit "Estado d
 - Script `service-usuarios/docs/db/alteracoes-etapa5-1.sql`.
 
 **Etapas 5.2 a 5.6 — Telas do admin** (uma por vez, cada uma com plano, testes e relatório):
-- **5.2 Categorias** (produtos): `POST`, `PUT`, `DELETE /api/v1/categorias` (ADMIN). Excluir categoria com produtos → 409.
+- **5.2 Categorias** (produtos): *Feita.* `GET /categorias/resumo`, `POST`, `PUT`, `DELETE /api/v1/categorias` (ADMIN).
+  Nome único sem maiúscula/acento; excluir só sem nenhum produto (nem removido, por causa da FK) → senão 409.
 - **5.3 Clientes** (usuários): `GET /clientes` já existe; `PATCH /api/v1/clientes/{id}/suspensao` (suspender/reativar).
 - **5.4 Produtos** (produtos): listar todos os produtos (de qualquer produtor, com produtor e categoria) e remover (soft delete), ADMIN.
 - **5.5 Pedidos** (pedidos): listar todos os pedidos, cancelar (devolvendo o estoque pela rota interna de estorno)

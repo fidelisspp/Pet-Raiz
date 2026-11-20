@@ -57,6 +57,8 @@ Token sem `id` inteiro ou com `role` fora de CUSTOMER/PRODUCER/ADMIN → 401.
 | GET | `/produtos` | público | Catálogo paginado. Filtros: `nome`, `categoriaId`, `produtorId`, `petType` (`dog` = dog+both, `cat` = cat+both, `both` = só both) |
 | GET | `/produtos/{id}` | público | Produto ativo de produtor aprovado; senão 404 |
 | GET | `/categorias` | público | Categorias em ordem alfabética |
+| GET | `/categorias/resumo` | ADMIN | Categorias com `productCount` (ativos) e `removedProductCount` (Etapa 5.2) |
+| POST, PUT `/{id}`, DELETE `/{id}` | `/categorias` | ADMIN | Criar, renomear (nome único sem maiúscula/acento → 409) e excluir (só sem produtos, nem removidos → 409) |
 | POST | `/produtos` | PRODUCER | Cadastro; dono = claim `id`. `imageUrl` opcional = `/images/arquivo.(jpg\|jpeg\|png\|webp)`; sem ele grava `/images/sem-foto.png`. `petType` opcional (padrão `both`). Resposta traz `producerId` |
 | POST | `/produtos/meus/imagens` | PRODUCER | Upload multipart (campo `arquivo`, jpg/jpeg/png/webp, até 2 MB) → 201 `{"url":"/images/<uuid>.jpg"}`. 422 com `errors.arquivo`; 415 se não for multipart |
 | GET | `/produtos/meus` | PRODUCER | Produtos do dono do token, paginado (padrão `createdAt,desc`, 10). Inclui estoque 0, exclui removidos. Não chama o service-usuarios |
