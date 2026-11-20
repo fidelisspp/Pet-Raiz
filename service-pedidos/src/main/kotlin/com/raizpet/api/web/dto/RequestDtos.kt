@@ -86,3 +86,10 @@ data class StatusEntregaDto(
     @field:Pattern(regexp = "^(pending|preparing|shipped|delivered)$", message = "deve ser pending, preparing, shipped ou delivered")
     val status: String? = null
 )
+
+/** POST /favoritos. Favoritar um produto que já é favorito não dá erro (idempotente). */
+data class FavoritoCreateDto(
+    @field:NotNull
+    @field:Positive
+    val productId: Int? = null
+)

@@ -4,6 +4,7 @@ import com.raizpet.api.entity.Address
 import com.raizpet.api.entity.Cart
 import com.raizpet.api.entity.CartItem
 import com.raizpet.api.entity.DeliveryStatus
+import com.raizpet.api.entity.Favorite
 import com.raizpet.api.entity.OrderProducerGroup
 import com.raizpet.api.entity.PurchaseOrder
 import jakarta.persistence.LockModeType
@@ -100,4 +101,12 @@ interface OrderProducerGroupRepository : JpaRepository<OrderProducerGroup, Int> 
         """
     )
     fun findRecebidoForUpdate(id: Int, producerId: Int): OrderProducerGroup?
+}
+
+interface FavoriteRepository : JpaRepository<Favorite, Int> {
+
+    // Mais recentes primeiro
+    fun findAllByCustomerIdOrderByCreatedAtDescIdDesc(customerId: Int): List<Favorite>
+
+    fun findByCustomerIdAndProductId(customerId: Int, productId: Int): Favorite?
 }

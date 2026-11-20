@@ -5,11 +5,13 @@ import com.raizpet.api.entity.OrderItem
 import com.raizpet.api.entity.OrderProducerGroup
 import com.raizpet.api.entity.PurchaseOrder
 import com.raizpet.api.service.CarrinhoComProdutos
+import com.raizpet.api.service.FavoritoComProduto
 import com.raizpet.api.service.PedidoRecebidoService
 import com.raizpet.api.web.dto.CarrinhoItemResponseDto
 import com.raizpet.api.web.dto.CarrinhoResponseDto
 import com.raizpet.api.web.dto.EnderecoDto
 import com.raizpet.api.web.dto.EnderecoResponseDto
+import com.raizpet.api.web.dto.FavoritoResponseDto
 import com.raizpet.api.web.dto.PagamentoResponseDto
 import com.raizpet.api.web.dto.PedidoItemResponseDto
 import com.raizpet.api.web.dto.PedidoProdutorResponseDto
@@ -17,6 +19,23 @@ import com.raizpet.api.web.dto.PedidoRecebidoResponseDto
 import com.raizpet.api.web.dto.PedidoResponseDto
 import java.math.BigDecimal
 import java.math.RoundingMode
+
+object FavoritoMapper {
+
+    fun toDto(f: FavoritoComProduto): FavoritoResponseDto {
+        val p = f.produto
+        return FavoritoResponseDto(
+            productId = f.favorite.productId,
+            name = p?.name,
+            price = p?.price,
+            stock = p?.stock,
+            imageUrl = p?.imageUrl,
+            producerId = p?.producerId,
+            available = p != null && p.active,
+            createdAt = f.favorite.createdAt
+        )
+    }
+}
 
 object EnderecoMapper {
 

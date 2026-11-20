@@ -42,6 +42,9 @@ carrinho) responde **404**, como se não existisse.
 | POST | `/pedidos/{id}/pagamento` | Pagamento simulado: `pending` → `paid` + `confirmedAt`. Se já não está pending → 409 |
 | GET | `/pedidos` | Histórico paginado (`page`, `size`), mais recente primeiro |
 | GET | `/pedidos/{id}` | Pedido completo (só o dono) |
+| GET | `/favoritos` | Favoritos do cliente, mais recentes primeiro, com os dados do produto (uma chamada a `/interno/produtos?ids=`). Produto removido → `available=false`. 503 se o service-produtos cair |
+| POST | `/favoritos` | `{productId}`. **Idempotente**: 201 criado, 200 se já era favorito. Inexistente → 404; inativo → 409. Corrida entre dois POST iguais: a `uk_favorite` barra o segundo, que responde 200 |
+| DELETE | `/favoritos/{productId}` | 204, mesmo se não era favorito. Não chama o service-produtos |
 | GET | `/pedidos/recebidos` | **PRODUCER.** As partes (`order_producer_group`) do produtor do token, só de pedidos **pagos**, mais recentes primeiro. Filtro `status` opcional; `page`, `size` |
 | GET | `/pedidos/recebidos/{grupoId}` | **PRODUCER.** Uma parte; de outro produtor, não paga ou inexistente → 404 |
 | PATCH | `/pedidos/recebidos/{grupoId}/status` | **PRODUCER.** `{status}`: só o próximo da sequência `pending → preparing → shipped → delivered`; voltar/pular/repetir → 409. `SELECT ... FOR UPDATE` no grupo evita que dois cliques simultâneos avancem duas etapas |

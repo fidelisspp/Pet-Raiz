@@ -107,3 +107,20 @@ data class PedidoRecebidoResponseDto(
     val items: List<PedidoItemResponseDto>,
     val total: BigDecimal
 )
+
+/**
+ * Item de GET /favoritos (e resposta do POST). Nome, preço, estoque, imagem e producerId vêm do
+ * service-produtos na hora. available = false quando o produto foi removido/desativado (aí, se ele
+ * não existir mais, os dados do produto vêm null): o item continua na lista para o cliente desfavoritar.
+ * imageUrl é o caminho relativo ("/images/x.jpg"): o app junta com a URL base do service-produtos.
+ */
+data class FavoritoResponseDto(
+    val productId: Int,
+    val name: String?,
+    val price: BigDecimal?,
+    val stock: Int?,
+    val imageUrl: String?,
+    val producerId: Int?,
+    val available: Boolean,
+    val createdAt: LocalDateTime
+)

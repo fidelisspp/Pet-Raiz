@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 3 (pedidos recebidos pelo produtor).
+**Estado:** Etapa 4 (favoritos).
 
 ### Mudanças por etapa
 
@@ -11,6 +11,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 1 | **Novas:** `GET /produtores/me` (usuários); `GET /produtos/meus`, `GET/PUT/DELETE /produtos/meus/{id}` (produtos). **Alterada (compatível):** `POST /produtos` aceita `imageUrl` ausente → grava `/images/sem-foto.png` |
 | 2 | **Nova:** `POST /produtos/meus/imagens` (upload multipart). As fotos enviadas são servidas no mesmo `GET /images/**` |
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
+| 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
 
 ## Convenções
 
@@ -195,6 +196,26 @@ Carrinho:
                "producerId": 2, "quantity": 2, "subtotal": 99.80, "available": true } ] }
 ```
 `available=false`: produto inativo/removido; fica no carrinho, fora do subtotal, e bloqueia o checkout (409).
+
+### Favoritos — CUSTOMER *(Etapa 4)*
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/favoritos` | — | 200 lista de `FavoritoDto` (pode ser `[]`) | 401 · 403 · 503 |
+| `POST /api/v1/favoritos` | `{ "productId": 1 }` | **201** criado · **200** já era favorito (mesmo corpo) | 401 · 403 · 404 produto inexistente · 409 produto inativo · 422 · 503 |
+| `DELETE /api/v1/favoritos/{productId}` | — | 204 (também se não era favorito) | 401 · 403 |
+
+- **Lista:** sem paginação, mais recentes primeiro. Os dados do produto vêm do service-produtos na hora (uma chamada só).
+- **POST idempotente:** favoritar de novo não duplica nem dá erro. Estoque 0 pode ser favoritado.
+- **DELETE idempotente** e não depende do service-produtos (funciona mesmo com ele fora do ar).
+- Produto removido/desativado depois de favoritado continua na lista com `available: false` (se nem existir mais, `name`, `price`, `stock`, `imageUrl` e `producerId` vêm `null`): o app mostra como indisponível e deixa desfavoritar.
+- Para saber se um produto é favorito (ícone de coração no catálogo), o app usa a lista do `GET` e confere os `productId`.
+
+`FavoritoDto`:
+```json
+{ "productId": 1, "name": "Ração Orgânica de Frango", "price": 89.90, "stock": 10,
+  "imageUrl": "/images/frango.jpg", "producerId": 2, "available": true, "createdAt": "2026-11-20T10:37:24" }
+```
 
 ### Pedidos
 
