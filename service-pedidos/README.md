@@ -109,13 +109,13 @@ O que esta versão simplificada **não** cobre, de propósito:
   dado baixa, este serviço não tem como saber. O estoque fica baixado sem pedido até alguém
   corrigir pelo log.
 - **Estorno com falha** não é repetido automaticamente.
-- **Cancelamento de pedido** (e a devolução de estoque que viria com ele) ficou para depois.
+- **Cancelamento de pedido:** só pelo admin (Etapa 5.5), e só enquanto nenhuma parte foi enviada.
 - **Estoque do carrinho não é reservado:** adicionar ou alterar só confere o estoque do momento.
   Quem garante o estoque é a reserva no checkout.
 - **Produtor não é conferido** no checkout: só o produto (ativo e com estoque). O catálogo já
   esconde produto de produtor não aprovado.
 
-## Visão do ADMIN (Etapa 5.3)
+## Visão do ADMIN (Etapas 5.3 e 5.5)
 
 `PedidoAdminController` (`/api/v1/pedidos/admin`, `@PreAuthorize("hasRole('ADMIN')")`), separado do
 `PedidoController`, que é todo CUSTOMER.
@@ -123,3 +123,20 @@ O que esta versão simplificada **não** cobre, de propósito:
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/pedidos/admin/clientes?ids=` | Por cliente: pedidos **pagos** (`orders`) e total gasto (`totalSpent`). Até 100 ids |
+| GET | `/pedidos/admin?busca=&status=` | Todos os pedidos (5.5). `busca` = número ou nome do cliente; `status` = pendentes, enviados, entregues, atrasados, cancelados |
+| GET | `/pedidos/admin/resumo` | Pedidos dos últimos 30 dias e pedidos atrasados (5.5) |
+| POST | `/pedidos/admin/{id}/cancelamento` | Cancela (5.5): só sem parte enviada; partes `canceled`, estorno do estoque, `paid` → `refunded` |
+| PATCH | `/pedidos/admin/grupos/{grupoId}/status` | Corrige o status de uma parte, livre entre os 4 (5.5) |
+
+**Etapa 5.5, como funciona:**
+- **Nomes dos clientes:** o service-pedidos só guarda `customer_id`. A lista pede os nomes da página ao
+  service-usuarios (`GET /interno/clientes?ids=`) e a busca por nome pede os ids que casam (`?busca=`). As duas
+  chamadas ficam **fora** da transação do banco; se o service-usuarios cair, a lista sai com `customerName: null`.
+- **Atraso:** pago há mais de 3 dias (`PRAZO_ENVIO`) com alguma parte `pending`/`preparing`. O mesmo filtro JPQL
+  (`FILTRO_ADMIN`) serve à lista, à contagem e ao resumo.
+- **Cancelamento:** trava a linha do pedido (`SELECT … FOR UPDATE`), confere que nenhuma parte saiu, chama o estorno
+  e só então grava `canceled`. Se o estorno falhar → 503 e nada muda. Mesma ambiguidade da reserva: num **timeout**,
+  o service-produtos pode ter devolvido o estoque mesmo assim (o log diz quais itens conferir).
+- **Produtor:** continua vendo a parte cancelada (`status: canceled`, `nextStatus: null`, PATCH → 409); por isso as
+  consultas dele aceitam pagamento `paid` **ou** `refunded`. `proximo()` virou um `when` explícito (antes usava a
+  ordem do enum, e `canceled` viraria "próximo de delivered").

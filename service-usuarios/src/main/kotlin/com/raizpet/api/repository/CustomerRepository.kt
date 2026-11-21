@@ -23,4 +23,9 @@ interface CustomerRepository : JpaRepository<Customer, Int> {
         """
     )
     fun buscarParaAdmin(busca: String?, suspenso: Boolean?, pageable: Pageable): Page<Customer>
+
+    // Rota interna da Etapa 5.5 (nomes para a lista de pedidos do admin)
+    fun findAllByIdIn(ids: Collection<Int>): List<Customer>
+
+    fun findTop100ByNameContainingIgnoreCaseOrderByName(nome: String): List<Customer>
 }

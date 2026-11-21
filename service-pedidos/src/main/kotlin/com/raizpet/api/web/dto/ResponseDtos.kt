@@ -13,6 +13,40 @@ data class ClienteComprasDto(
     val totalSpent: BigDecimal
 )
 
+/**
+ * Pedido na visão do ADMIN (Etapa 5.5).
+ * customerName vem do service-usuarios: null se ele estiver fora do ar (a lista aparece mesmo assim).
+ * late/daysLate: pago há mais de 3 dias e com alguma parte ainda não enviada (pending ou preparing).
+ */
+data class PedidoAdminDto(
+    val id: Int,
+    val createdAt: LocalDateTime,
+    val customerId: Int,
+    val customerName: String?,
+    val totalAmount: BigDecimal,
+    val paymentStatus: String,
+    val canceledAt: LocalDateTime?,
+    val cancelable: Boolean,
+    val late: Boolean,
+    val daysLate: Int,
+    val producers: List<ParteAdminDto>
+)
+
+/** A parte de um produtor no pedido: groupId é o id usado no PATCH do status. */
+data class ParteAdminDto(
+    val groupId: Int,
+    val producerId: Int,
+    val deliveryStatus: String,
+    val itemCount: Int,
+    val late: Boolean
+)
+
+/** Resumo do topo da tela Pedidos do admin: pedidos dos últimos 30 dias e pedidos atrasados (qualquer data). */
+data class PedidosResumoDto(
+    val last30Days: Long,
+    val late: Long
+)
+
 data class EnderecoResponseDto(
     val id: Int,
     val label: String?,

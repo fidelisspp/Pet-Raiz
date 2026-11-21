@@ -15,6 +15,12 @@ import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
 import java.time.Duration
 
+/** Item de GET /api/v1/interno/clientes?ids= ou ?busca= no service-usuarios (Etapa 5.5). */
+data class ClienteNome(
+    val id: Int = 0,
+    val name: String = ""
+)
+
 /** Resposta de GET /api/v1/interno/clientes/{id} no service-usuarios. */
 data class ClienteInterno(
     val id: Int = 0,
@@ -36,6 +42,7 @@ class UsuariosClient(
 
     companion object {
         const val ROTA_CLIENTE = "/api/v1/interno/clientes/{id}"
+        const val ROTA_NOMES = "/api/v1/interno/clientes"
         private const val INDISPONIVEL = "Serviço de usuários indisponível no momento. Tente novamente em instantes."
         private val log = LoggerFactory.getLogger(UsuariosClient::class.java)
     }
@@ -47,6 +54,35 @@ class UsuariosClient(
             setReadTimeout(Duration.ofMillis(readTimeoutMs))
         })
         .build()
+
+    /**
+     * Nomes dos clientes (Etapa 5.5, lista de pedidos do admin): por [ids] ou pelos que têm [busca] no nome.
+     * Falha vira ServicoIndisponivelException; quem chama decide se a tela segue sem os nomes.
+     */
+    fun buscarNomes(ids: Collection<Int>? = null, busca: String? = null): List<ClienteNome> {
+        val json = try {
+            restClient.get()
+                .uri { uri ->
+                    uri.path(ROTA_NOMES)
+                    if (!ids.isNullOrEmpty()) uri.queryParam("ids", ids.joinToString(","))
+                    if (!busca.isNullOrBlank()) uri.queryParam("busca", busca)
+                    uri.build()
+                }
+                .header(InternoKeyFilter.HEADER, chaveInterna)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(String::class.java)
+        } catch (ex: RestClientException) {
+            log.error("service-usuarios indisponível em {}{}: {}", baseUrl, ROTA_NOMES, ex.message)
+            throw ServicoIndisponivelException(INDISPONIVEL)
+        }
+        return try {
+            jsonMapper.readValue(json ?: "[]", Array<ClienteNome>::class.java).toList()
+        } catch (ex: JacksonException) {
+            log.error("Resposta inesperada do service-usuarios em {}: {}", ROTA_NOMES, ex.message)
+            throw ServicoIndisponivelException(INDISPONIVEL)
+        }
+    }
 
     fun buscarCliente(id: Int): ClienteInterno? {
         val json = try {

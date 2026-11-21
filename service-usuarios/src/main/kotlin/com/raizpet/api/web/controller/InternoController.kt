@@ -1,5 +1,8 @@
 package com.raizpet.api.web.controller
 
+import org.springframework.web.bind.annotation.RequestParam
+import com.raizpet.api.exception.ParametroInvalidoException
+import com.raizpet.api.web.dto.ClienteNomeInternoDto
 import com.raizpet.api.config.SpringDocOpenApiConfig.Companion.INTERNO_SCHEME
 import com.raizpet.api.service.CustomerService
 import com.raizpet.api.service.ProducerService
@@ -54,6 +57,37 @@ class InternoController(
     @GetMapping("/produtores/aprovados")
     fun getProdutoresAprovados(): ResponseEntity<List<ProdutorAprovadoDto>> =
         ResponseEntity.ok(producerService.buscarTodosAprovados().map(ProdutorMapper::toAprovadoDto))
+
+    @Operation(
+        summary = "Nomes de clientes (interno)",
+        description = "O service-pedidos chama na lista de pedidos do admin (Etapa 5.5): ids = nomes dos clientes da página; " +
+            "busca = clientes cujo nome contém o texto (até 100), para buscar pedidos pelo nome do cliente. " +
+            "Use um dos dois. Só id e nome.",
+        security = [SecurityRequirement(name = INTERNO_SCHEME)],
+        responses = [
+            ApiResponse(
+                responseCode = "200", description = "Lista de { id, name } (ids que não são de cliente ficam de fora)",
+                content = [Content(mediaType = "application/json", array = ArraySchema(schema = Schema(implementation = ClienteNomeInternoDto::class)))]
+            ),
+            ApiResponse(responseCode = "400", description = "Nem ids nem busca, ou mais de 100 ids", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))]),
+            ApiResponse(responseCode = "401", description = "Header X-Internal-Key ausente ou inválido", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorMessage::class))])
+        ]
+    )
+    @GetMapping("/clientes")
+    fun getNomesDeClientes(
+        @RequestParam(required = false) ids: List<Int>?,
+        @RequestParam(required = false) busca: String?
+    ): ResponseEntity<List<ClienteNomeInternoDto>> {
+        val clientes = when {
+            !ids.isNullOrEmpty() -> {
+                if (ids.size > 100) throw ParametroInvalidoException("No máximo 100 ids por consulta")
+                customerService.buscarPorIds(ids.distinct())
+            }
+            !busca.isNullOrBlank() -> customerService.buscarPorNome(busca)
+            else -> throw ParametroInvalidoException("Informe ids ou busca")
+        }
+        return ResponseEntity.ok(clientes.map { ClienteNomeInternoDto(requireNotNull(it.id), it.name) })
+    }
 
     @Operation(
         summary = "Situação de um cliente (service-pedidos)",

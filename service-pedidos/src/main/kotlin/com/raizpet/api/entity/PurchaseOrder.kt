@@ -39,6 +39,10 @@ class PurchaseOrder : Serializable {
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: LocalDateTime = LocalDateTime.now()
 
+    // Etapa 5.5: preenchido quando o admin cancela (todas as partes ficam canceled)
+    @Column(name = "canceled_at")
+    var canceledAt: LocalDateTime? = null
+
     @OneToMany(mappedBy = "purchaseOrder", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("id")
     var groups: MutableList<OrderProducerGroup> = mutableListOf()

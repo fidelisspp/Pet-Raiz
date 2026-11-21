@@ -121,7 +121,7 @@ Get-Content <arquivo> -Raw -Encoding UTF8 | mysql -u root -p --default-character
 | 1 | `criar-bancos.sql` | (nenhum: cria os 6 bancos) |
 | 2 | `service-usuarios/docs/db/schema-usuarios.sql` + `alteracoes-etapa2.sql` + `alteracoes-etapa5-1.sql` | `pet_usuarios_db` e `pet_usuarios_db_test` |
 | 3 | `service-produtos/docs/db/schema-produtos.sql` + `alteracoes-etapa2.sql` | `pet_produtos_db` e `pet_produtos_db_test` |
-| 4 | `service-pedidos/docs/db/schema-pedidos.sql` + `alteracoes-etapa2.sql` | `pet_pedidos_db` e `pet_pedidos_db_test` |
+| 4 | `service-pedidos/docs/db/schema-pedidos.sql` + `alteracoes-etapa2.sql` + `alteracoes-etapa5-5.sql` | `pet_pedidos_db` e `pet_pedidos_db_test` |
 | 5 | `service-usuarios/docs/db/migracao-de-pet-raiz.sql` | (nomes qualificados; lê `pet_raizdb`) |
 | 6 | `service-produtos/docs/db/migracao-de-pet-raiz.sql` | idem |
 | 7 | `service-pedidos/docs/db/migracao-de-pet-raiz.sql` | idem |
@@ -136,6 +136,8 @@ As etapas 1 a 5 do roteiro não alteraram tabelas. A Etapa 5.1 (aprovação de p
 `service-usuarios/docs/db/alteracoes-etapa5-1.sql` (motivo e data da análise em `producer`; nome, tipo e
 tamanho do documento em `producer_document`). Ele aceita bancos já populados: rode depois do
 `alteracoes-etapa2.sql`, também em quem já tinha os bancos montados.
+A Etapa 5.5 (pedidos do admin) acrescentou `service-pedidos/docs/db/alteracoes-etapa5-5.sql` (status de entrega
+`canceled` e `purchase_order.canceled_at`), que também roda com dados.
 
 ## Usuários de teste
 

@@ -14,6 +14,7 @@ object UsuariosStub {
     enum class Modo { OK, ERRO_500, JSON_INVALIDO }
 
     private val CLIENTES = mapOf(101 to false, 102 to true)
+    private val NOMES = mapOf(101 to "Bia", 102 to "Bob")
 
     @Volatile
     var modo: Modo = Modo.OK
@@ -31,6 +32,30 @@ object UsuariosStub {
                 modo == Modo.JSON_INVALIDO -> 200 to "isto não é json"
                 id == null || id !in CLIENTES -> 404 to """{"status":404,"message":"Cliente id=$id não encontrado no sistema"}"""
                 else -> 200 to """{"id":$id,"suspended":${CLIENTES.getValue(id)}}"""
+            }
+            val bytes = corpo.toByteArray(StandardCharsets.UTF_8)
+            troca.responseHeaders.add("Content-Type", "application/json")
+            troca.sendResponseHeaders(status, bytes.size.toLong())
+            troca.responseBody.use { it.write(bytes) }
+        }
+        // Etapa 5.5: GET /interno/clientes?ids=101,102 ou ?busca=bi -> [{id, name}] (lista de pedidos do admin)
+        createContext("/api/v1/interno/clientes") { troca ->
+            chamadas.incrementAndGet()
+            val parametros = (troca.requestURI.query ?: "").split("&").filter { "=" in it }
+                .associate { java.net.URLDecoder.decode(it.substringBefore("="), StandardCharsets.UTF_8) to
+                    java.net.URLDecoder.decode(it.substringAfter("="), StandardCharsets.UTF_8) }
+            val ids = parametros["ids"]?.split(",")?.mapNotNull { it.trim().toIntOrNull() }
+            val busca = parametros["busca"]
+            val (status, corpo) = when {
+                troca.requestHeaders.getFirst("X-Internal-Key") != ProdutosStub.CHAVE ->
+                    401 to """{"status":401,"message":"Rota interna: envie o header X-Internal-Key válido"}"""
+                modo == Modo.ERRO_500 -> 500 to """{"status":500}"""
+                else -> {
+                    val escolhidos = NOMES.filter { (id, nome) ->
+                        (ids != null && id in ids) || (busca != null && nome.contains(busca, ignoreCase = true))
+                    }
+                    200 to escolhidos.entries.joinToString(",", "[", "]") { """{"id":${it.key},"name":"${it.value}"}""" }
+                }
             }
             val bytes = corpo.toByteArray(StandardCharsets.UTF_8)
             troca.responseHeaders.add("Content-Type", "application/json")

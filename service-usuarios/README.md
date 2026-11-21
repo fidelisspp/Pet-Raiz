@@ -53,6 +53,7 @@ token com a mesma `petraiz.jwt.secret-key` e usam `id` e `role` das claims.
 | GET | `/produtores/{id}/documento` | ADMIN | Baixa o documento enviado no cadastro (nome original no `Content-Disposition`) |
 | GET | `/interno/produtores/aprovados` | header `X-Internal-Key` | Todos os aprovados `[{id, companyName, cnpj}]`, para o service-produtos |
 | GET | `/interno/clientes/{id}` | header `X-Internal-Key` | `{id, suspended}`, para o checkout do service-pedidos. Id que não é de cliente → 404 |
+| GET | `/interno/clientes?ids=` ou `?busca=` | header `X-Internal-Key` | `[{id, name}]` (até 100), para a lista de pedidos do admin no service-pedidos (Etapa 5.5). Sem nenhum dos dois → 400 |
 
 Resposta pública do produtor: `id, companyName, shortDescription, cnpj, imageUrl, city, state,
 since, verified`. `imageUrl` é um caminho relativo (`/images/x.jpg`): o app junta com a URL base

@@ -112,3 +112,9 @@ data class ClienteInternoDto(
     val id: Int,
     val suspended: Boolean
 )
+
+/** Rota interna GET /interno/clientes (Etapa 5.5): o nome para a tela Pedidos do admin no service-pedidos. */
+data class ClienteNomeInternoDto(
+    val id: Int,
+    val name: String
+)

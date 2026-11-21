@@ -42,7 +42,11 @@ class PedidoRecebidoService(private val groupRepository: OrderProducerGroupRepos
         val atual = group.deliveryStatus
         val permitido = proximo(atual)
         if (novo != permitido) {
-            val motivo = if (permitido == null) "o pedido já foi entregue" else "o próximo status permitido é $permitido"
+            val motivo = when {
+                atual == DeliveryStatus.canceled -> "o pedido foi cancelado pelo administrador"
+                permitido == null -> "o pedido já foi entregue"
+                else -> "o próximo status permitido é $permitido"
+            }
             throw ConflitoException("Não é possível mudar o status de $atual para $novo: $motivo")
         }
         group.deliveryStatus = novo
@@ -60,7 +64,15 @@ class PedidoRecebidoService(private val groupRepository: OrderProducerGroupRepos
     }
 
     companion object {
-        /** Próximo status da sequência, ou null se já está no último (delivered). */
-        fun proximo(status: DeliveryStatus): DeliveryStatus? = DeliveryStatus.entries.getOrNull(status.ordinal + 1)
+        /**
+         * Próximo status da sequência, ou null quando não há (delivered ou canceled).
+         * Explícito, e não pela ordem do enum: canceled (Etapa 5.5) não é uma etapa depois de delivered.
+         */
+        fun proximo(status: DeliveryStatus): DeliveryStatus? = when (status) {
+            DeliveryStatus.pending -> DeliveryStatus.preparing
+            DeliveryStatus.preparing -> DeliveryStatus.shipped
+            DeliveryStatus.shipped -> DeliveryStatus.delivered
+            DeliveryStatus.delivered, DeliveryStatus.canceled -> null
+        }
     }
 }

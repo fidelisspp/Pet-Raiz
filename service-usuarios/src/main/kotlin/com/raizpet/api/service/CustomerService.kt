@@ -44,6 +44,16 @@ class CustomerService(
     fun buscarParaAdmin(busca: String?, suspenso: Boolean?, pageable: Pageable): Page<Customer> =
         customerRepository.buscarParaAdmin(busca?.trim()?.takeIf { it.isNotEmpty() }, suspenso, pageable)
 
+    /** Interno (Etapa 5.5): clientes com esses ids; ids que não são de cliente são ignorados. */
+    @Transactional(readOnly = true)
+    fun buscarPorIds(ids: Collection<Int>): List<Customer> =
+        if (ids.isEmpty()) emptyList() else customerRepository.findAllByIdIn(ids)
+
+    /** Interno (Etapa 5.5): até 100 clientes cujo nome contém [nome] (busca da lista de pedidos do admin). */
+    @Transactional(readOnly = true)
+    fun buscarPorNome(nome: String): List<Customer> =
+        customerRepository.findTop100ByNameContainingIgnoreCaseOrderByName(nome.trim())
+
     /**
      * Suspende ou reativa (idempotente: repetir o mesmo valor só devolve o cliente).
      * Suspenso não consegue fazer login (403 "Conta suspensa") nem finalizar compra (o checkout do

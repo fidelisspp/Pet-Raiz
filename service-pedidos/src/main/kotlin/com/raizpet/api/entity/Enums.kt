@@ -14,9 +14,12 @@ enum class ShippingMethod(val amount: BigDecimal) {
     express(BigDecimal("24.90"))
 }
 
-/** Novo = pending, Em preparo = preparing, Enviado = shipped, Entregue = delivered (decisão 6). */
+/**
+ * Novo = pending, Em preparo = preparing, Enviado = shipped, Entregue = delivered (decisão 6).
+ * canceled (Etapa 5.5) só existe quando o admin cancela o pedido inteiro: não faz parte da sequência.
+ */
 @Suppress("EnumEntryName")
-enum class DeliveryStatus { pending, preparing, shipped, delivered }
+enum class DeliveryStatus { pending, preparing, shipped, delivered, canceled }
 
 /**
  * No banco é 'credit_card' | 'pix'. Na API o app manda e recebe "card" | "pix" ([api]).

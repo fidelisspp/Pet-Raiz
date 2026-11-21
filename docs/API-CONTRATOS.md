@@ -2,7 +2,7 @@
 
 Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE.md, seção 7).
 
-**Estado:** Etapa 5.4 (produtos do admin). Próximas: 5.5 e 5.6 (telas do admin), ver o roteiro no CLAUDE.md.
+**Estado:** Etapa 5.6 (Início do admin, só no app: usa rotas existentes). Roteiro da Etapa 5 concluído; a Etapa 6 depende de confirmação.
 
 ### Mudanças por etapa
 
@@ -13,6 +13,7 @@ Fonte para o app Android (`PetRaiz`). Atualizado a cada etapa do roteiro (CLAUDE
 | 3 | **Novas:** `GET /pedidos/recebidos`, `GET /pedidos/recebidos/{grupoId}`, `PATCH /pedidos/recebidos/{grupoId}/status` (PRODUCER). `GET /pedidos` do cliente: formato **inalterado**; `producers[].deliveryStatus` agora muda conforme o produtor avança |
 | 4 | **Novas:** `GET /favoritos`, `POST /favoritos`, `DELETE /favoritos/{productId}` (CUSTOMER) |
 | 5 | **Alterada:** `PUT /enderecos/{id}` passa a responder **409** quando o endereço já foi usado em pedido (igual ao `DELETE`). Antes, alterava e o pedido antigo mostrava o endereço novo |
+| 5.5 | **Novas (ADMIN, pedidos):** `GET /pedidos/admin` (busca por número ou nome do cliente, filtro de situação), `GET /pedidos/admin/resumo`, `POST /pedidos/admin/{id}/cancelamento`, `PATCH /pedidos/admin/grupos/{grupoId}/status`. **Alterada (valor novo):** `deliveryStatus` pode ser `canceled` (no pedido do cliente e nos pedidos recebidos); pedido cancelado depois de pago tem `payment.status = refunded`. O produtor continua vendo a parte cancelada (`status: canceled`, `nextStatus: null`; PATCH → 409). **Interna nova:** `GET /interno/clientes?ids=\|busca=` (usuários) |
 | 5.4 | **Novas (ADMIN, produtos):** `GET /produtos/admin` (busca no nome do produto ou do produtor, `categoriaId`), `GET /produtos/admin/resumo`, `DELETE /produtos/admin/{id}` |
 | 5.3 | **Alterada (compatível, ADMIN, usuários):** `GET /clientes` aceita `busca` e `suspenso`. **Novas:** `PATCH /clientes/{id}/suspensao` (usuários), `GET /pedidos/admin/clientes?ids=` (pedidos) |
 | 5.2 | **Novas (ADMIN, produtos):** `GET /categorias/resumo` (com contagem de produtos), `POST /categorias`, `PUT /categorias/{id}`, `DELETE /categorias/{id}`. `GET /categorias` público **inalterado** |
@@ -330,7 +331,7 @@ Pedido:
                                 "quantity": 2, "unitPrice": 49.90, "subtotal": 99.80 } ],
                    "subtotal": 99.80 } ] }
 ```
-`deliveryStatus` (por produtor): `pending` → `preparing` → `shipped` → `delivered`. Quem avança é o produtor (`PATCH /pedidos/recebidos/{grupoId}/status`, abaixo); o cliente vê a mudança aqui, em `producers[].deliveryStatus`, sem nenhuma alteração neste contrato.
+`deliveryStatus` (por produtor): `pending` → `preparing` → `shipped` → `delivered`, ou `canceled` quando o admin cancelou o pedido (Etapa 5.5: aí **todas** as partes ficam `canceled` e um pagamento pago vira `refunded`). Quem avança é o produtor (`PATCH /pedidos/recebidos/{grupoId}/status`, abaixo); o cliente vê a mudança aqui, em `producers[].deliveryStatus`, sem nenhuma alteração neste contrato.
 
 ### Pedidos recebidos — `/api/v1/pedidos/recebidos` — PRODUCER *(Etapa 3)*
 
@@ -343,8 +344,9 @@ Cada "pedido recebido" é a **parte do produtor** num pedido (os itens dele). S�
 | `PATCH /api/v1/pedidos/recebidos/{grupoId}/status` | `{ "status": "preparing" }` | 200 `PedidoRecebidoDto` atualizado | 401 · 403 · 404 · 409 · 422 |
 
 - **Lista:** mais recentes primeiro (data do pedido), `size` padrão 10. `status` opcional: `pending` | `preparing` | `shipped` | `delivered`.
-- **PATCH:** só avança **uma** etapa por vez (`pending → preparing → shipped → delivered`). Voltar, pular, repetir o atual ou mexer em pedido já entregue → **409**, com `message` explicando (ex.: `"Não é possível mudar o status de pending para shipped: o próximo status permitido é preparing"`). `status` ausente ou fora dos 4 valores → **422**.
-- **`nextStatus`** é o valor que o PATCH aceita agora (`null` quando `delivered`): o app pode usá-lo no botão "Avançar para…".
+- **PATCH:** só avança **uma** etapa por vez (`pending → preparing → shipped → delivered`). Voltar, pular, repetir o atual, mexer em pedido já entregue ou **cancelado pelo admin** (Etapa 5.5) → **409**, com `message` explicando (ex.: `"Não é possível mudar o status de pending para shipped: o próximo status permitido é preparing"`). `status` ausente ou fora dos 4 valores → **422**.
+- **Cancelado pelo admin** (Etapa 5.5): a parte continua aparecendo, com `status: "canceled"`.
+- **`nextStatus`** é o valor que o PATCH aceita agora (`null` quando `delivered` ou `canceled`): o app pode usá-lo no botão "Avançar para…".
 
 `PedidoRecebidoDto`:
 ```json
@@ -375,6 +377,40 @@ Cada "pedido recebido" é a **parte do produtor** num pedido (os itens dele). S�
 - Um item por id, na ordem pedida (repetidos aparecem uma vez); cliente sem pedido pago → `0` e `0.00`.
 - Se o service-pedidos estiver fora do ar, o app mostra a lista de clientes mesmo assim, sem os números de compras.
 
+### Pedidos do ADMIN — `/api/v1/pedidos/admin` *(Etapa 5.5)*
+
+| Método e URL | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/v1/pedidos/admin?busca=&status=&page=&size=` | — | 200 página de `PedidoAdminDto` | 400 `status` inválido · 401 · 403 |
+| `GET /api/v1/pedidos/admin/resumo` | — | 200 `{ last30Days, late }` | 401 · 403 |
+| `POST /api/v1/pedidos/admin/{id}/cancelamento` | — | 200 `PedidoAdminDto` | 401 · 403 · 404 · 409 · 503 |
+| `PATCH /api/v1/pedidos/admin/grupos/{grupoId}/status` | `{ "status": "shipped" }` | 200 `PedidoAdminDto` | 401 · 403 · 404 · 409 · 422 |
+
+- **Lista:** **todos** os pedidos, inclusive os não pagos; mais recentes primeiro; `size` padrão 10.
+  `busca` = número do pedido (`700` ou `#700`) ou trecho do nome do cliente. `status` (opcional):
+  `pendentes` (alguma parte `pending`/`preparing`) · `enviados` (alguma `shipped`) · `entregues` (todas `delivered`) ·
+  `atrasados` · `cancelados`. Os quatro primeiros ignoram pedidos cancelados.
+- **Atrasado** = pago há **mais de 3 dias** e com alguma parte ainda não enviada (`pending`/`preparing`).
+  `late`/`daysLate` no pedido (dias desde o pagamento) e `late` em cada parte.
+- **Resumo:** `last30Days` = pedidos criados nos últimos 30 dias; `late` = pedidos atrasados (de qualquer data).
+- **Cancelar:** só se **nenhuma** parte foi enviada (`cancelable: true`). Todas as partes viram `canceled`,
+  `canceledAt` é preenchido, o estoque reservado volta (estorno no service-produtos) e um pagamento `paid` vira
+  `refunded` (pagamento simulado: não há dinheiro a devolver). Não pago: só cancela e devolve o estoque.
+  409 = já cancelado ou com parte enviada/entregue. 503 = o estorno falhou e **nada** mudou no pedido
+  (se foi timeout, o estoque pode ter voltado mesmo assim: o service-pedidos registra no log para conferir).
+- **Corrigir status:** correção manual de **uma** parte, qualquer um de `pending|preparing|shipped|delivered`
+  (pode voltar). 409 = parte cancelada ou pedido não pago. 422 = `status` fora desses 4.
+- `customerName` vem do service-usuarios; `null` se ele estiver fora do ar (a lista aparece mesmo assim, e a busca
+  por nome não encontra nada). O nome dos produtores o app pega em `GET /produtores/cadastros` (usuários).
+
+`PedidoAdminDto`:
+```json
+{ "id": 4, "createdAt": "2026-11-20T10:24:53", "customerId": 1001, "customerName": "Bia Souza",
+  "totalAmount": 212.20, "paymentStatus": "paid", "canceledAt": null,
+  "cancelable": false, "late": false, "daysLate": 0,
+  "producers": [ { "groupId": 5, "producerId": 2, "deliveryStatus": "delivered", "itemCount": 2, "late": false } ] }
+```
+
 ## Rotas internas (não usar no app)
 
 Exigem o header `X-Internal-Key`; sem ele → 401.
@@ -383,6 +419,7 @@ Exigem o header `X-Internal-Key`; sem ele → 401.
 |---|---|---|
 | usuários | `GET /api/v1/interno/produtores/aprovados` | catálogo (produtos) |
 | usuários | `GET /api/v1/interno/clientes/{id}` → `{ id, suspended }` | checkout (pedidos) |
+| usuários | `GET /api/v1/interno/clientes?ids=1,2` (máx. 100) ou `?busca=` → `[{ id, name }]` | pedidos do admin (Etapa 5.5) |
 | produtos | `GET /api/v1/interno/produtos?ids=1,2` (máx. 100) | carrinho e checkout |
 | produtos | `POST /api/v1/interno/estoque/reserva` `{ itens: [{productId, quantity}] }` | checkout (tudo ou nada) |
-| produtos | `POST /api/v1/interno/estoque/estorno` (mesma lista) | compensação |
+| produtos | `POST /api/v1/interno/estoque/estorno` (mesma lista) | compensação e cancelamento pelo admin (Etapa 5.5) |

@@ -171,9 +171,13 @@ real versionada (use variável de ambiente com padrão de dev). Commit "Estado d
   (usuários não chama pedidos: seria um ciclo). Rotas de admin do service-pedidos ficam em `PedidoAdminController`.
 - **5.4 Produtos** (produtos): *Feita.* `GET /produtos/admin` (publicados = recorte do catálogo; busca no nome do
   produto ou do produtor), `GET /produtos/admin/resumo`, `DELETE /produtos/admin/{id}` (soft delete), em `ProdutoAdminController`.
-- **5.5 Pedidos** (pedidos): listar todos os pedidos, cancelar (devolvendo o estoque pela rota interna de estorno)
-  e corrigir o status de uma parte, ADMIN.
-- **5.6 Início do admin**: números reais (pedidos, entregas atrasadas, clientes, produtos publicados) a partir das rotas acima.
+- **5.5 Pedidos** (pedidos): *Feita.* `GET /pedidos/admin` (todos, inclusive não pagos; busca por número ou nome do
+  cliente via `GET /interno/clientes?ids=|busca=` do service-usuarios, com degradação), `GET /pedidos/admin/resumo`,
+  `POST /pedidos/admin/{id}/cancelamento` (só sem parte enviada; partes `canceled`, estorno, `paid` → `refunded`) e
+  `PATCH /pedidos/admin/grupos/{grupoId}/status` (correção livre entre os 4). `delivery_status` ganhou `canceled` e
+  `purchase_order` ganhou `canceled_at` (`alteracoes-etapa5-5.sql`). Atrasado = pago há mais de 3 dias com parte não enviada.
+- **5.6 Início do admin**: *Feita* (só no app, sem rota nova): os quatro números vêm de `/pedidos/admin/resumo`,
+  `/clientes?size=1` (`totalElements`) e `/produtos/admin/resumo`.
 
 **Etapa 6 — A confirmar comigo** (não comece sem eu pedir): recuperação de senha, avaliações de produto
 (possível `service-avaliacoes` na porta 8084), ingredientes.
