@@ -13,10 +13,12 @@ que os serviços aguentam a queda um do outro.
 - [ ] `emulator -avd Medium_Phone -memory 1536 -no-snapshot` e espere o Android acalmar (1 a 2 minutos depois
       do boot; se aparecer "System UI isn't responding", toque em **Wait**).
 - [ ] `adb reverse tcp:8081 tcp:8081`, `tcp:8080 tcp:8080`, `tcp:8082 tcp:8082`.
-- [ ] Abra o app uma vez e veja a Loja carregar (o primeiro acesso a cada serviço é mais lento).
+- [ ] Aqueça os serviços: abra a Loja, entre como admin e abra o **Início** e a tela **Pedidos** uma vez. O primeiro
+      acesso a cada rota é lento e, com o PC sem memória, pode estourar o tempo do app (aparece "—" no Início).
 - [ ] Deixe no emulador um arquivo para o documento do produtor (qualquer PDF ou foto em Downloads).
 - [ ] Abas do navegador prontas: `README.md` (diagrama) e o Swagger `http://localhost:8082/docs-petraiz.html`.
-- [ ] Dados para digitar: CPF `529.982.247-25`, CNPJ `11.222.333/0001-81`, senha `123456`.
+- [ ] Dados para digitar: CPF `529.982.247-25`, CNPJ `73.145.926/0001-49` (os dois válidos e livres no banco limpo),
+      senha `123456`. No endereço, preencha também a UF (o "SP" cinza é só a dica do campo).
 
 Contas (senha `123456`): admin `admin@petraiz.dev`, produtor `produtor@petraiz.dev`. O cliente e o produtor
 novo são criados ao vivo.
@@ -57,7 +59,8 @@ chamada só por requisição.
 
 1. **Cadastre-se** com o CPF de exemplo. Favorite um produto (coração).
 2. Adicione **dois produtos de produtores diferentes** ao carrinho (o novo e um do Sítio Boa Vista).
-3. **Finalizar:** cadastre o endereço, escolha o frete e Pix, confirme o pagamento.
+3. **Finalizar:** cadastre o endereço, escolha o frete e toque em **Gerar Pix**: o pagamento é simulado e o pedido
+   já sai confirmado e pago.
 4. **Pedidos:** o pedido mostra uma linha por produtor, cada uma com o seu status.
 
 *O que falar:* no checkout, pedidos chama usuários (o cliente está suspenso?) e produtos (reserva de estoque
@@ -73,7 +76,8 @@ tudo ou nada, com `SELECT … FOR UPDATE`). Se gravar o pedido falhar depois da 
 ## 7. Admin no dia a dia (2 min) — admin
 
 1. **Pedidos:** filtro **Atrasados** (pago há mais de 3 dias e ainda não enviado). Mostre **Corrigir status**.
-2. Tente **Cancelar** o pedido novo: o app explica que não dá, porque um produtor já enviou.
+2. No pedido novo, o botão **Cancelar pedido** não aparece: um produtor já enviou. Em um pedido sem nada enviado
+   ele aparece, e o cancelamento devolve o estoque e estorna o pagamento.
 3. **Clientes:** a lista vem do service-usuarios e as compras ("N pedidos · R$ X") do service-pedidos.
    **Suspenda** o cliente e mostre que ele não consegue mais finalizar compra.
 4. **Categorias** e **Produtos** rapidamente.
@@ -104,6 +108,8 @@ indisponível, em vez de quebrar a tela.
 | Emulador travado ("System UI isn't responding") | Toque em **Wait**; se repetir, **Close app** |
 | Emulador não liga: "not enough disk space" | Libere espaço no C: (precisa de uns 5 GB) |
 | Login do produtor novo abre "em análise" depois de aprovado | Saia e entre de novo |
+| "—" num número do Início do admin | Primeiro acesso lento: saia da tela e volte |
+| Seletor de arquivo não mostra o PDF | Abra a aba **Documents** do seletor; se faltar, reinicie o emulador |
 
 ## Depois do ensaio (e da apresentação)
 
@@ -120,3 +126,12 @@ foreach ($db in "pet_usuarios_db","pet_produtos_db","pet_pedidos_db") {
 
 As fotos e documentos enviados no ensaio ficam nas pastas `uploads/` dos serviços; podem ser apagados à mão.
 `Documents/pet-raiz-backup-antes-da-limpeza/` guarda os bancos como estavam antes da limpeza, por segurança.
+
+O emulador cria `~/.android/avd/Medium_Phone.avd/snapshots/default_boot/ram.img` (4 GB) a cada boot. Com ele
+desligado, apague essa pasta para devolver o espaço do disco.
+
+## Ensaio de 21/11/2026
+
+O roteiro foi percorrido inteiro no emulador (partes 2 a 8) e funcionou. O ensaio levou às correções no app:
+mensagens de e-mail/CPF/CNPJ já cadastrado e de servidor fora do ar agora dizem o que fazer, e a tela "Cadastro
+em análise" não promete mais aviso por e-mail. Depois, os bancos foram restaurados do backup limpo.
