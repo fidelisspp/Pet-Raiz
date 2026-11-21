@@ -61,6 +61,24 @@ As setas `◄──` são chamadas HTTP síncronas entre serviços, nas rotas `/
 | Checkout | pedidos → produtos | `POST /interno/estoque/reserva` | Reserva tudo ou nada (`SELECT ... FOR UPDATE`) e devolve nome, preço e foto do momento |
 | Compensação | pedidos → produtos | `POST /interno/estoque/estorno` | Se o pedido não for gravado depois da reserva, devolve o estoque (ver `service-pedidos/README.md`) |
 | Carrinho e favoritos | pedidos → produtos | `GET /interno/produtos?ids=` | Dados atuais dos produtos, uma chamada para a lista inteira |
+| Pedidos do admin | pedidos → usuários | `GET /interno/clientes?ids=` ou `?busca=` | Nome dos clientes na lista e busca de pedido pelo nome; se o usuários cair, a lista sai sem os nomes |
+| Cancelamento pelo admin | pedidos → produtos | `POST /interno/estoque/estorno` | Devolve o estoque do pedido cancelado; se falhar, o pedido não é cancelado (503) |
+
+O app também **compõe** dados de dois serviços em vez de criar um ciclo entre eles: a tela Clientes do admin
+pega a lista no `service-usuarios` e as compras de cada cliente no `service-pedidos` (o de usuários não chama
+o de pedidos, porque o de pedidos já chama o de usuários). Se o de pedidos cair, a lista aparece sem as compras.
+
+## O que cada perfil faz
+
+| Perfil | Funcionalidades |
+|---|---|
+| Visitante | Catálogo e detalhe de produto, produtores, cadastro de cliente e de produtor (com documento, que vai para análise) |
+| Cliente (`CUSTOMER`) | Carrinho, endereços, checkout com pagamento simulado (Pix ou cartão), meus pedidos com o status de cada produtor, favoritos, dados pessoais e troca de senha |
+| Produtor (`PRODUCER`) | Perfil do negócio, meus produtos (criar, editar com foto, remover), pedidos recebidos (só a parte dele) e "Avançar para…" o próximo status |
+| Admin (`ADMIN`) | Início com os números do painel, aprovação de produtores (aprovar, rejeitar com motivo, reabrir, ver documento), categorias, clientes (suspender e reativar), produtos publicados (remover) e pedidos (cancelar e corrigir status) |
+
+Um pedido com produtos de vários produtores tem uma **parte por produtor**, cada uma com o seu status de entrega
+(`pending` → `preparing` → `shipped` → `delivered`, ou `canceled` se o admin cancelar o pedido inteiro).
 
 ## Como subir
 
@@ -100,6 +118,20 @@ responde 503 enquanto ele não estiver no ar.
 
 Em produção, `JWT_SECRET` e `INTERNAL_KEY` devem ser trocados.
 
+### Rodar o app Android junto
+
+O app (`AndroidStudioProjects/PetRaiz`) chama `localhost` nas três portas. Com o emulador ligado e os serviços
+no ar, redirecione as portas do emulador para o PC:
+
+```powershell
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8080 tcp:8080
+adb reverse tcp:8082 tcp:8082
+```
+
+Repita depois de reiniciar o emulador. Se o app disser "Não foi possível conectar ao servidor", confira com
+`adb reverse --list`.
+
 ### Documentação da API
 
 - **Swagger:** `http://localhost:<porta>/docs-petraiz.html` em cada serviço (8081, 8080, 8082).
@@ -132,7 +164,7 @@ As migrações (5 a 7) copiam os dados do banco do monolito (`pet_raizdb`) mante
 que mantém `product.producer_id` válido sem FK, e só fazem `SELECT` nele. Os bancos `_test` recebem
 só schema + alterações: os dados de teste vêm do `@Sql` de cada serviço.
 
-As etapas 1 a 5 do roteiro não alteraram tabelas. A Etapa 5.1 (aprovação de produtor) acrescentou
+As etapas 1 a 4 do roteiro não alteraram tabelas. A Etapa 5.1 (aprovação de produtor) acrescentou
 `service-usuarios/docs/db/alteracoes-etapa5-1.sql` (motivo e data da análise em `producer`; nome, tipo e
 tamanho do documento em `producer_document`). Ele aceita bancos já populados: rode depois do
 `alteracoes-etapa2.sql`, também em quem já tinha os bancos montados.
